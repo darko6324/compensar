@@ -458,11 +458,8 @@ tbody td{padding:9px 13px;color:var(--text)}
         <label>Nombre del Empleado
           <select id="ll-nombre" onchange="applyLlFilters()"><option value="">Todos</option></select>
         </label>
-        <label>Fecha Desde
-          <input type="date" id="ll-desde" onchange="applyLlFilters()"/>
-        </label>
-        <label>Fecha Hasta
-          <input type="date" id="ll-hasta" onchange="applyLlFilters()"/>
+        <label>Mes
+          <select id="ll-mes" onchange="applyLlFilters()"><option value="">Todos</option></select>
         </label>
         <button class="btn-clear" onclick="clearLlFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
       </div>
@@ -801,7 +798,7 @@ function buildHome(){
   const rad=RAW.rad,nc=RAW.nc,msg=RAW.msg,ll=RAW.ll;
   // ANS
   const cumple=nc.filter(r=>{const v=fv(r,['CUMPLIMIENTO ANS','CUMPLIMIENTO','ANS']).toLowerCase();return v.includes('cumple')&&!v.includes('no');}).length;
-  const puntual=ll.filter(r=>{const v=fv(r,['CUMPLIMIENTO','ESTADO','NOVEDAD','PUNTUAL']).toLowerCase();return v.includes('puntual')||v.includes('a tiempo')||v.includes('ok');}).length;
+  const puntual=ll.filter(r=>{const v=fv(r,['CUMPLIMIENTO','cumplimiento']).trim().toLowerCase();return v==='cumple';}).length;
 
   renderKPIs('kpi-home',[
     {c:'or',i:'fa-solid fa-file-lines',v:fmt(rad.length),l:'Total Radicaciones'},
@@ -1082,7 +1079,7 @@ function llCols(rows){
     nombre:     find(['NOMBRE','nombre','EMPLEADO','FUNCIONARIO','NOMBRE EMPLEADO']),
     sede:       find(['SEDE','sede','PUNTO','VENTANILLA','LUGAR']),
     hora:       find(['HORA','hora','HORA LLEGADA','HORA DE LLEGADA']),
-    cumplimiento:find(['CUMPLIMIENTO','cumplimiento','ESTADO','PUNTUAL','NOVEDAD']),
+    cumplimiento:find(['CUMPLIMIENTO','cumplimiento']),
     obs:        find(['OBSERVACIONES','OBSERVACION','OBS','NOVEDAD','COMENTARIO']),
   };
 }
@@ -1092,30 +1089,25 @@ function buildLlFilters(){
   const c=llCols(rows);
   const nombres=c.nombre?[...new Set(rows.map(r=>(r[c.nombre]||'').trim()).filter(Boolean))].sort():[];
   populateSelect('ll-nombre',nombres,false);
+  const meses=c.fecha?[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort):[];
+  populateSelect('ll-mes',meses,false);
 }
 
 function applyLlFilters(){
   const nombre=document.getElementById('ll-nombre').value;
-  const desde=document.getElementById('ll-desde').value;
-  const hasta=document.getElementById('ll-hasta').value;
+  const mes=document.getElementById('ll-mes').value;
   const c=llCols(RAW.ll);
   FILT.ll=RAW.ll.filter(r=>{
     if(nombre&&(r[c.nombre]||'').trim()!==nombre)return false;
-    if(desde||hasta){
-      const d=parseDate(r[c.fecha]||'');
-      if(!d)return false;
-      if(desde&&d<new Date(desde))return false;
-      if(hasta&&d>new Date(hasta+'T23:59:59'))return false;
-    }
+    if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
     return true;
   });
   renderLl();
 }
 
 function clearLlFilters(){
-  ['ll-nombre'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ll-desde').value='';
-  document.getElementById('ll-hasta').value='';
+  document.getElementById('ll-nombre').value='';
+  document.getElementById('ll-mes').value='';
   FILT.ll=[...RAW.ll];
   renderLl();
 }
@@ -1136,8 +1128,8 @@ function renderLl(){
     return;
   }
 
-  // Clasificar puntualidad
-  const isCumple=r=>{const v=(r[c.cumplimiento]||'').toLowerCase();return v.includes('cumple')||v.includes('puntual')||v.includes('ok')||v.includes('a tiempo')||v.includes('sin novedad');};
+  // Clasificar puntualidad — solo registros con CUMPLIMIENTO = 'Cumple' (exacto, sin importar mayúsculas)
+  const isCumple=r=>{const v=(r[c.cumplimiento]||'').trim().toLowerCase();return v==='cumple';};
   const puntual=rows.filter(isCumple).length;
   const tarde=rows.length-puntual;
 
@@ -1181,7 +1173,7 @@ function renderLl(){
     mesObj[m].t++;
     if(isCumple(r))mesObj[m].c++;
   });
-  const ml=sortedMeses(mesObj).slice(-10);
+  const ml=sortedMeses(mesObj);
   mkCh('ch-ll-mes',{type:'line',
     data:{labels:ml,datasets:[
       {label:'% Puntual',data:ml.map(k=>pctN(mesObj[k].c,mesObj[k].t)),borderColor:CGR,backgroundColor:CGR+'22',fill:true,tension:.4,pointBackgroundColor:CGR,pointRadius:4},
