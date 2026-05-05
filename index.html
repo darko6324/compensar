@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <style>
 :root{
   --orange:#F37021;--orange-light:#fde8d6;--orange-dark:#d45f0f;
@@ -337,7 +339,7 @@ tbody td{padding:9px 13px;color:var(--text)}
       </div>
       <div class="g3">
         <div class="card"><div class="ct"><i class="fa-solid fa-layer-group"></i> Top Tipos Correspondencia</div><div id="home-tipos" class="pl"></div></div>
-        <div class="card"><div class="ct"><i class="fa-solid fa-location-dot"></i> Top Destinos Mensajería</div><div id="home-dests" class="pl"></div></div>
+        <div class="card"><div class="ct"><i class="fa-solid fa-user-tag"></i> Top Clientes Mensajería</div><div id="home-dests" class="pl"></div></div>
         <div class="card"><div class="ct"><i class="fa-solid fa-clock"></i> Puntualidad Personal</div><div style="position:relative;height:180px"><canvas id="ch-home-punt"></canvas></div><div id="home-punt-leg" class="dl" style="margin-top:12px"></div></div>
       </div>
     </div>
@@ -579,8 +581,9 @@ tbody td{padding:9px 13px;color:var(--text)}
           <div id="msg-tipo-leg" class="dl" style="margin-top:12px"></div>
         </div>
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-fire"></i> Mapa de Calor – Servicios por Día y Hora</div>
-          <div id="msg-heatmap" style="overflow-x:auto;padding-top:4px"></div>
+          <div class="ct"><i class="fa-solid fa-map-marker-alt"></i> Mapa de Servicios por Ubicación</div>
+          <div id="msg-map" style="height:300px;border-radius:10px;overflow:hidden;background:#f1f5f9;"></div>
+          <p style="font-size:11px;color:var(--muted);margin-top:8px"><i class="fa-solid fa-circle-info"></i> Cada punto representa un servicio. El color indica el estado: <span style="color:#22c55e">■</span> Finalizado <span style="color:#f59e0b;margin-left:6px">■</span> En curso <span style="color:#ef4444;margin-left:6px">■</span> Cancelado</p>
         </div>
       </div>
     </div>
@@ -829,8 +832,8 @@ function buildHome(){
   const tipos=topN(groupBy(rad,r=>fv(r,['TIPO CORRESPONDENCIA','Tipo Correspondencia','TIPO'])),5);
   renderPL('home-tipos',tipos,'or');
 
-  // Top destinos msg
-  const dests=topN(groupBy(msg,r=>fv(r,['DESTINO','destino','DESTINATARIO'])),5);
+  // Top clientes mensajería (nombre cliente)
+  const dests=topN(groupBy(msg,r=>fv(r,['NOMBRE CLIENTE','CLIENTE','nombre cliente','DESTINATARIO','DESTINO'])),5);
   renderPL('home-dests',dests,'bl');
 
   // Donut puntualidad
@@ -838,8 +841,8 @@ function buildHome(){
   mkCh('ch-home-punt',{type:'doughnut',data:{labels:['Puntual','Tardanza'],datasets:[{data:[puntual,tarde],backgroundColor:[CGR,CRD],borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}});
   document.getElementById('home-punt-leg').innerHTML=`
-    <div class="di"><div class="dd" style="background:${CGR}"></div><span>Puntual</span><span class="dv">${fmt(puntual)}</span></div>
-    <div class="di"><div class="dd" style="background:${CRD}"></div><span>Tardanza</span><span class="dv">${fmt(tarde)}</span></div>`;
+    <div class="di"><div class="dd" style="background:${CGR}"></div><span>Puntual</span><span class="dv">${fmt(puntual)} <small style="font-weight:400;color:var(--muted)">(${pctS(puntual,ll.length)})</small></span></div>
+    <div class="di"><div class="dd" style="background:${CRD}"></div><span>Tardanza</span><span class="dv">${fmt(tarde)} <small style="font-weight:400;color:var(--muted)">(${pctS(tarde,ll.length)})</small></span></div>`;
 }
 
 // ═══════════════════════════════════
@@ -1326,6 +1329,8 @@ function msgCols(rows){
     conductor: find(['CONDUCTOR','conductor','MENSAJERO','mensajero','NOMBRE MENSAJERO']),
     estado:    find(['ESTADO','STATUS','estado']),
     tipoSrv:   find(['TIPO DE SERVICIO','TIPO SERVICIO','TIPO_SERVICIO','TIPO','SERVICIO','CLASE']),
+    lat:       find(['LATITUD','latitud','LAT','lat','LATITUDE']),
+    lng:       find(['LONGITUD','longitud','LNG','lng','LON','lon','LONGITUDE']),
   };
 }
 
@@ -1409,60 +1414,72 @@ function renderMsg(){
     options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false}}}});
   document.getElementById('msg-tipo-leg').innerHTML=tipos.map((t,i)=>`<div class="di"><div class="dd" style="background:${tColors[i]}"></div><span>${t[0]}</span><span class="dv">${fmt(t[1])} (${pctS(t[1],rows.length)})</span></div>`).join('');
 
-  // Mapa de calor: Día semana vs Hora del día
-  renderMsgHeatmap(rows, c);
+  // Mapa de servicios por coordenadas
+  renderMsgMap(rows, c);
 }
 
-function renderMsgHeatmap(rows, c){
-  const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  // Construir matriz 7 días x franjas de 2h (0-2, 2-4, ... 22-24) = 12 franjas
-  const FRANJAS=Array.from({length:12},(_,i)=>`${String(i*2).padStart(2,'0')}-${String(i*2+2).padStart(2,'0')}`);
-  const matrix=Array.from({length:7},()=>Array(12).fill(0));
+let _msgMap=null;
+function renderMsgMap(rows,c){
+  const el=document.getElementById('msg-map');
+  if(!el)return;
+
+  // Recopilar puntos con coordenadas válidas
+  const pts=[];
   rows.forEach(r=>{
-    const d=parseDate(r[c.fecha]||'');
-    if(!d)return;
-    const dia=d.getDay();
-    // intentar extraer hora de campo fecha o de un campo hora
-    const raw=r[c.fecha]||'';
-    const hm=raw.match(/(\d{1,2}):(\d{2})/);
-    const hora=hm?+hm[1]:Math.floor(Math.random()*10+7); // fallback distribución laboral si no hay hora
-    const franja=Math.min(Math.floor(hora/2),11);
-    matrix[dia][franja]++;
-  });
-  const maxVal=Math.max(...matrix.flat(),1);
-
-  const cellW=48; const cellH=28;
-  const labelW=36; const labelH=20;
-  const totalW=labelW+12*cellW;
-  const totalH=labelH+7*cellH+8;
-
-  let svg=`<svg width="${totalW}" height="${totalH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'Poppins',sans-serif;display:block;margin:0 auto">`;
-
-  // Encabezados de franja horaria
-  FRANJAS.forEach((f,i)=>{
-    svg+=`<text x="${labelW+i*cellW+cellW/2}" y="14" text-anchor="middle" font-size="8" fill="#94a3b8">${f}</text>`;
+    const lat=parseFloat((r[c.lat]||'').toString().replace(',','.'));
+    const lng=parseFloat((r[c.lng]||'').toString().replace(',','.'));
+    if(!isNaN(lat)&&!isNaN(lng)&&lat!==0&&lng!==0){
+      const estado=(r[c.estado]||'').trim().toLowerCase();
+      const cliente=(r[c.cliente]||'Sin cliente').trim();
+      const conductor=(r[c.conductor]||'–').trim();
+      const fecha=(r[c.fecha]||'').trim();
+      const color=estado==='finalizado'?'#22c55e':estado.includes('cancel')||estado.includes('rechaz')?'#ef4444':'#f59e0b';
+      pts.push({lat,lng,color,cliente,conductor,fecha,estado:r[c.estado]||'–'});
+    }
   });
 
-  // Filas por día
-  DIAS.forEach((dia,di)=>{
-    const y=labelH+di*cellH;
-    svg+=`<text x="${labelW-4}" y="${y+cellH/2+4}" text-anchor="end" font-size="10" fill="#64748b" font-weight="500">${dia}</text>`;
-    FRANJAS.forEach((_,fi)=>{
-      const val=matrix[di][fi];
-      const ratio=val/maxVal;
-      const r=Math.round(243*1+(4-243)*ratio);   // naranja #F37021 → azul #004AAD interpolado
-      const g=Math.round(112*(1-ratio)+74*ratio);
-      const b=Math.round(33*(1-ratio)+173*ratio);
-      const fillColor=val===0?'#f1f5f9':`rgb(${r},${g},${b})`;
-      const textColor=ratio>0.5?'#fff':'#64748b';
-      svg+=`<rect x="${labelW+fi*cellW+1}" y="${y+1}" width="${cellW-2}" height="${cellH-2}" rx="4" fill="${fillColor}"/>`;
-      if(val>0)svg+=`<text x="${labelW+fi*cellW+cellW/2}" y="${y+cellH/2+4}" text-anchor="middle" font-size="9" fill="${textColor}" font-weight="600">${val}</text>`;
-    });
+  // Si no hay coordenadas mostrar mensaje
+  if(!pts.length){
+    el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;flex-direction:column;gap:8px"><i class="fa-solid fa-map-location-dot" style="font-size:32px;opacity:.4"></i><span>No se encontraron coordenadas (lat/lng) en los datos</span></div>';
+    return;
+  }
+
+  // Destruir mapa previo si existe
+  if(_msgMap){try{_msgMap.remove();}catch(e){} _msgMap=null;}
+  el.innerHTML='';
+
+  // Centro del mapa = promedio de coordenadas
+  const cLat=pts.reduce((s,p)=>s+p.lat,0)/pts.length;
+  const cLng=pts.reduce((s,p)=>s+p.lng,0)/pts.length;
+
+  _msgMap=L.map(el,{zoomControl:true,scrollWheelZoom:false}).setView([cLat,cLng],11);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap',maxZoom:18
+  }).addTo(_msgMap);
+
+  // Agregar marcadores circulares
+  pts.forEach(p=>{
+    L.circleMarker([p.lat,p.lng],{
+      radius:7,
+      fillColor:p.color,
+      color:'#fff',
+      weight:1.5,
+      opacity:1,
+      fillOpacity:0.85
+    }).bindPopup(`<div style="font-family:'Poppins',sans-serif;font-size:12px;min-width:160px">
+      <strong style="color:#1e293b">${p.cliente}</strong><br>
+      <span style="color:#64748b">Conductor:</span> ${p.conductor}<br>
+      <span style="color:#64748b">Fecha:</span> ${p.fecha}<br>
+      <span style="color:#64748b">Estado:</span> <b style="color:${p.color}">${p.estado}</b>
+    </div>`).addTo(_msgMap);
   });
 
-  svg+='</svg>';
-  const el=document.getElementById('msg-heatmap');
-  if(el)el.innerHTML=svg;
+  // Ajustar vista a todos los puntos
+  try{
+    const bounds=L.latLngBounds(pts.map(p=>[p.lat,p.lng]));
+    _msgMap.fitBounds(bounds,{padding:[20,20]});
+  }catch(e){}
 }
 
 // ═══════════════════════════════════
