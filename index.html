@@ -10,7 +10,90 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+/* Leaflet.heat — implementación embebida (sin CDN externo) */
+(function(){if(typeof L==='undefined')return;
+L.HeatLayer=L.Layer.extend({
+  initialize:function(e,t){this._latlngs=e;L.setOptions(this,t)},
+  setLatLngs:function(e){this._latlngs=e;return this.redraw()},
+  addLatLng:function(e){this._latlngs.push(e);return this.redraw()},
+  setOptions:function(e){L.setOptions(this,e);if(this._heat)this._updateOptions();return this.redraw()},
+  redraw:function(){if(this._heat&&!this._frame&&this._map&&!this._map._animating)
+    this._frame=L.Util.requestAnimFrame(this._redraw,this);return this},
+  onAdd:function(e){this._map=e;if(!this._canvas)this._initCanvas();
+    if(this.options.opacity||this.options.opacity===0)this.setOpacity(this.options.opacity);
+    var t=e.getPanes();(this.options.pane?t[this.options.pane]:t.overlayPane).appendChild(this._canvas);
+    e.on('moveend',this._reset,this);e.on('resize',this._reset,this);
+    if(e._zoomAnimated)e.on('zoomanim',this._animateZoom,this);this._reset()},
+  onRemove:function(e){this._canvas.parentNode&&this._canvas.parentNode.removeChild(this._canvas);
+    e.off('moveend',this._reset,this);e.off('resize',this._reset,this);
+    if(e._zoomAnimated)e.off('zoomanim',this._animateZoom,this)},
+  setOpacity:function(e){this.options.opacity=e;if(this._canvas)this._canvas.style.opacity=e;return this},
+  _initCanvas:function(){var e=this._canvas=L.DomUtil.create('canvas','leaflet-layer leaflet-zoom-animated');
+    var t=this._map.getSize();e.width=t.x;e.height=t.y;
+    var i=this._map.options.zoomAnimation&&L.Browser.any3d;
+    L.DomUtil.addClass(e,i?'leaflet-zoom-animated':'leaflet-zoom-hide');
+    this._updateOptions()},
+  _updateOptions:function(){this._heat=_createHeat(this._canvas,this.options||{})},
+  _reset:function(){var e=this._map.containerPointToLayerPoint([0,0]);
+    L.DomUtil.setPosition(this._canvas,e);
+    var t=this._map.getSize();
+    if(this._heat._width!==t.x){this._canvas.width=this._heat._width=t.x}
+    if(this._heat._height!==t.y){this._canvas.height=this._heat._height=t.y}
+    this._redraw()},
+  _redraw:function(){if(!this._map)return;
+    var e=[],t=this._map._getMapPanePos(),i=this._map.getZoom(),n=this._map.getPixelOrigin();
+    var r=Math.pow(2,Math.max(0,Math.min(i,12)-i)),a=r*this.options.radius||r*25,s=[];
+    for(var o=0,l=this._latlngs.length;o<l;o++){
+      var u=this._latlngs[o],c=this._map.project(u.length===2?L.latLng(u):L.latLng(u[0],u[1]));
+      s.push([c.x-n.x+t.x,c.y-n.y+t.y,u[2]||1])}
+    this._heat.clear();for(var f=0;f<s.length;f++)this._heat.add(s[f][0],s[f][1],s[f][2]);
+    this._heat.draw(this.options.minOpacity||0.05);this._frame=null},
+  _animateZoom:function(e){var t=this._map.getZoomScale(e.zoom),i=this._map._getCenterOffset(e.center)._multiplyBy(-t).subtract(this._map._getMapPanePos());
+    if(L.DomUtil.setTransform)L.DomUtil.setTransform(this._canvas,i,t);
+    else this._canvas.style[L.DomUtil.TRANSFORM]=L.DomUtil.getTranslateString(i)+' scale('+t+')'}});
+
+function _createHeat(canvas,opts){
+  var r=opts.radius||25,blur=opts.blur===undefined?15:opts.blur;
+  var grad=opts.gradient||{0.4:'blue',0.65:'lime',1:'red'};
+  var ctx=canvas.getContext('2d'),circle,colorArr;
+  function _getColor(){
+    var g=document.createElement('canvas'),gctx=g.getContext('2d');
+    var d=(r+blur)*2;g.width=g.height=d;
+    var rr=gctx.createRadialGradient(d/2,d/2,0,d/2,d/2,r+blur);
+    rr.addColorStop(0,'rgba(0,0,0,1)');rr.addColorStop(1,'rgba(0,0,0,0)');
+    gctx.fillStyle=rr;gctx.fillRect(0,0,d,d);
+    var gg=document.createElement('canvas');gg.width=256;gg.height=1;
+    var lctx=gg.getContext('2d');var lg=lctx.createLinearGradient(0,0,256,0);
+    for(var s in grad)lg.addColorStop(+s,grad[s]);
+    lctx.fillStyle=lg;lctx.fillRect(0,0,256,1);
+    return{circle:g,palette:lctx.getImageData(0,0,256,1).data};
+  }
+  var heat={_width:canvas.width,_height:canvas.height};
+  var _pts=[];
+  heat.clear=function(){_pts=[];ctx.clearRect(0,0,canvas.width,canvas.height)};
+  heat.add=function(x,y,i){_pts.push([x,y,i])};
+  heat.draw=function(minOp){
+    var c=_getColor();circle=c.circle;colorArr=c.palette;
+    var max=0;for(var i=0;i<_pts.length;i++)if(_pts[i][2]>max)max=_pts[i][2];
+    if(max===0)max=1;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+    for(var j=0;j<_pts.length;j++){
+      var p=_pts[j];
+      ctx.globalAlpha=Math.min(Math.max(p[2]/max,minOp),1)*0.5;
+      ctx.drawImage(circle,p[0]-(r+blur),p[1]-(r+blur));}
+    var img=ctx.getImageData(0,0,canvas.width,canvas.height);
+    var d=img.data;
+    for(var k=3;k<d.length;k+=4){
+      var a=d[k];if(a===0)continue;
+      var idx=Math.min(Math.floor(a/255*255),255)*4;
+      d[k-3]=colorArr[idx];d[k-2]=colorArr[idx+1];d[k-1]=colorArr[idx+2];d[k]=Math.round(a*0.9);}
+    ctx.putImageData(img,0,0);return heat};
+  return heat;}
+L.heatLayer=function(e,t){return new L.HeatLayer(e,t)};
+})();
+</script>
 <style>
 :root{
   --orange:#F37021;--orange-light:#fde8d6;--orange-dark:#d45f0f;
@@ -583,7 +666,7 @@ tbody td{padding:9px 13px;color:var(--text)}
         </div>
         <div class="card">
           <div class="ct"><i class="fa-solid fa-map-marker-alt"></i> Mapa de Servicios por Ubicación</div>
-          <div id="msg-map" style="height:340px;border-radius:10px;overflow:hidden;background:#1a1a2e;"></div>
+          <div id="msg-map" style="height:340px;width:100%;border-radius:10px;overflow:hidden;background:#1a1a2e;display:block;"></div>
           <p style="font-size:11px;color:var(--muted);margin-top:8px"><i class="fa-solid fa-circle-info"></i> Mapa de calor por densidad de servicios · Azul = baja concentración · Rojo = alta concentración</p>
         </div>
       </div>
@@ -640,6 +723,10 @@ function goTo(p){
   document.getElementById('pTitle').textContent=t[0];
   document.getElementById('pSub').textContent=t[1];
   window.scrollTo(0,0);
+  // Leaflet necesita invalidateSize cuando su contenedor pasa de display:none a visible
+  if(p==='mensajeria'&&_msgMap){
+    setTimeout(()=>{ _msgMap.invalidateSize(true); _msgMap.setView([4.5709,-74.2973],6); },150);
+  }
 }
 
 // ═══════════════════════════════════
@@ -1515,6 +1602,7 @@ function renderMsgMap(rows,c){
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
       attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
     }).addTo(_msgMap);
+    setTimeout(()=>{ if(_msgMap) _msgMap.invalidateSize(true); },100);
     // Overlay con ciudades sin geocodificar
     const msg=sinGeo.length?`Ciudades no reconocidas: ${sinGeo.slice(0,6).join(', ')}${sinGeo.length>6?'…':''}`:'No se encontraron ciudades en los datos';
     L.control.attribution({prefix:msg}).addTo(_msgMap);
@@ -1532,6 +1620,9 @@ function renderMsgMap(rows,c){
     attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
   }).addTo(_msgMap);
 
+  // Forzar recálculo de tamaño del contenedor (fix Leaflet en contenedores ocultos/tab)
+  setTimeout(()=>{ if(_msgMap) _msgMap.invalidateSize(true); },100);
+
   // Capa de calor
   L.heatLayer(heatPts,{
     radius:35,
@@ -1540,17 +1631,23 @@ function renderMsgMap(rows,c){
     gradient:{0.0:'#001f6e',0.25:'#0066cc',0.5:'#00ccaa',0.7:'#ffdd00',0.85:'#ff7700',1.0:'#ff0000'}
   }).addTo(_msgMap);
 
-  // Ajustar vista: si tenemos datos en varias ciudades → fitBounds, si es 1 ciudad → zoom 11
+  // Vista: ajustar solo a los puntos de datos, con zoom máximo 13 para no sobre-acercar
+  // Si los datos caben todos dentro de Colombia → mostrar Colombia completa como mínimo
   try{
     if(allPts.length===1){
-      _msgMap.setView(allPts[0],11);
+      _msgMap.setView(allPts[0],10);
     } else {
       const bounds=L.latLngBounds(allPts);
-      // Incluir Colombia completa si los datos son locales (bounds pequeño)
-      const colBounds=L.latLngBounds([[-4.2,-81.7],[13.4,-66.8]]);
-      _msgMap.fitBounds(bounds.extend(colBounds),{padding:[10,10],maxZoom:14});
+      _msgMap.fitBounds(bounds,{padding:[40,40],maxZoom:13});
     }
   }catch(e){_msgMap.setView(COLOMBIA_CENTER,COLOMBIA_ZOOM);}
+
+  // Garantizar que si el zoom quedó mayor que el territorio colombiano, retroceder a Colombia
+  setTimeout(()=>{
+    if(_msgMap&&_msgMap.getZoom()<5){
+      _msgMap.setView(COLOMBIA_CENTER,COLOMBIA_ZOOM);
+    }
+  },400);
 }
 
 // ═══════════════════════════════════
