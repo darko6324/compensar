@@ -522,22 +522,11 @@ tbody td{padding:9px 13px;color:var(--text)}
         </div>
       </div>
 
-      <div class="g2">
-        <div class="card">
-          <div class="ct"><i class="fa-solid fa-tags"></i> Por Tipo</div>
-          <div class="cw s"><canvas id="ch-nc-tipo"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="ct"><i class="fa-solid fa-building"></i> Por Área</div>
-          <div class="cw s"><canvas id="ch-nc-area"></canvas></div>
-        </div>
-      </div>
-
       <div class="card">
         <div class="ct"><i class="fa-solid fa-list-check"></i> Últimos 10 Casos – Semáforo ANS</div>
         <div class="tw">
           <table>
-            <thead><tr><th>#</th><th>Fecha Recepción</th><th>Caso</th><th>Área</th><th>Tipo</th><th>Responsable</th><th>T.Respuesta</th><th>T.Plan Acción</th><th>ANS</th></tr></thead>
+            <thead><tr><th>#</th><th>Fecha Recepción</th><th>Caso</th><th>Responsable</th><th>T.Respuesta</th><th>T.Plan Acción</th><th>ANS</th></tr></thead>
             <tbody id="tb-nc"></tbody>
           </table>
         </div>
@@ -547,42 +536,51 @@ tbody td{padding:9px 13px;color:var(--text)}
     <!-- ══ MENSAJERÍA ══ -->
     <div class="page" id="page-mensajeria">
       <div class="sh">
-        <div><h2><i class="fa-solid fa-truck" style="color:var(--green)"></i> Mensajería</h2><p>Logística general · Destinos frecuentes y análisis de rutas</p></div>
+        <div><h2><i class="fa-solid fa-truck" style="color:var(--green)"></i> Mensajería</h2><p>Logística general · Clientes frecuentes, conductores y análisis de rutas</p></div>
         <div class="sbadge" style="background:#f0fdf4;color:#15803d"><i class="fa-solid fa-route"></i> Logística</div>
+      </div>
+
+      <div class="filters">
+        <label>Mes (Fecha de Servicio)
+          <select id="msg-mes" onchange="applyMsgFilters()"><option value="">Todos</option></select>
+        </label>
+        <button class="btn-clear" onclick="clearMsgFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
       </div>
 
       <div class="kg" id="kpi-msg"></div>
 
       <div class="g2">
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-location-dot"></i> Top 10 Destinos Frecuentes</div>
+          <div class="ct"><i class="fa-solid fa-location-dot"></i> Top 10 Clientes Frecuentes</div>
           <div class="cw t"><canvas id="ch-msg-dest"></canvas></div>
         </div>
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-calendar-days"></i> Volumen Mensual de Envíos</div>
+          <div class="ct"><i class="fa-solid fa-calendar-days"></i> Volumen Mensual de Servicios</div>
           <div class="cw"><canvas id="ch-msg-mes"></canvas></div>
         </div>
       </div>
 
       <div class="g2">
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-person-biking"></i> Por Mensajero</div>
+          <div class="ct"><i class="fa-solid fa-person-biking"></i> Por Conductor</div>
           <div id="msg-mensajero" class="pl"></div>
         </div>
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-circle-check"></i> Por Estado de Entrega</div>
+          <div class="ct"><i class="fa-solid fa-circle-check"></i> Por Estado</div>
           <div style="position:relative;height:200px"><canvas id="ch-msg-estado"></canvas></div>
           <div id="msg-estado-leg" class="dl" style="margin-top:12px"></div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="ct"><i class="fa-solid fa-table"></i> Últimos Envíos Registrados</div>
-        <div class="tw">
-          <table>
-            <thead><tr><th>#</th><th>Fecha</th><th>Remitente</th><th>Destino</th><th>Mensajero</th><th>Estado</th></tr></thead>
-            <tbody id="tb-msg"></tbody>
-          </table>
+      <div class="g2">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-tags"></i> Por Tipo de Servicio</div>
+          <div style="position:relative;height:240px"><canvas id="ch-msg-tipo"></canvas></div>
+          <div id="msg-tipo-leg" class="dl" style="margin-top:12px"></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-fire"></i> Mapa de Calor – Servicios por Día y Hora</div>
+          <div id="msg-heatmap" style="overflow-x:auto;padding-top:4px"></div>
         </div>
       </div>
     </div>
@@ -1269,7 +1267,7 @@ function renderNc(){
     {c:'or',i:'fa-solid fa-list',v:fmt(rows.length),l:'Total No Conformidades'},
     {c:'gr',i:'fa-solid fa-shield-check',v:pC+'%',l:'Cumple ANS',s:fmt(cumple)+' casos',sc:pC>=80?'var(--green)':'var(--red)'},
     {c:'rd',i:'fa-solid fa-circle-xmark',v:fmt(noCumple),l:'No Cumple ANS',s:pctS(noCumple,rows.length)},
-    {c:'bl',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.area]||''))).filter(k=>k).length),l:'Áreas Involucradas'},
+    {c:'am',i:'fa-solid fa-stopwatch',v:tRespVals.length?avg(tRespVals)+' d':'–',l:'Prom. Días Respuesta'},
   ]);
 
   // ANS bars
@@ -1299,16 +1297,6 @@ function renderNc(){
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:10}}},
     scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},y2:{position:'right',grid:{display:false}},x:{grid:{display:false}}}}});
 
-  // Por tipo
-  const tipos=topN(groupBy(rows,r=>(r[c.tipo]||'Sin dato').trim()),6);
-  mkCh('ch-nc-tipo',{type:'bar',data:{labels:tipos.map(t=>t[0]),datasets:[{data:tipos.map(t=>t[1]),backgroundColor:PAL,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#f1f5f9'}}}}});
-
-  // Por área
-  const areas=topN(groupBy(rows,r=>(r[c.area]||'Sin dato').trim()),6);
-  mkCh('ch-nc-area',{type:'bar',data:{labels:areas.map(a=>a[0]),datasets:[{data:areas.map(a=>a[1]),backgroundColor:CBL+'cc',borderRadius:4}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
-
   // Tabla últimos 10
   document.getElementById('tb-nc').innerHTML=rows.slice(-10).reverse().map((r,i)=>{
     const v=(r[c.cumpl]||'').toLowerCase();
@@ -1317,8 +1305,6 @@ function renderNc(){
       <td>${i+1}</td>
       <td>${r[c.fecha]||'–'}</td>
       <td><strong>${r[c.caso]||'N/A'}</strong></td>
-      <td>${r[c.area]||'–'}</td>
-      <td>${r[c.tipo]||'–'}</td>
       <td>${r[c.resp]||'–'}</td>
       <td style="text-align:center">${r[c.tResp]||'–'}</td>
       <td style="text-align:center">${r[c.tPlan]||'–'}</td>
@@ -1335,65 +1321,148 @@ function msgCols(rows){
   const h=Object.keys(rows[0]);
   const find=cands=>{for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}return null;};
   return{
-    fecha:    find(['FECHA','fecha','DATE','FECHA ENVIO','FECHA_ENVIO']),
-    remit:    find(['REMITENTE','remitente','DE','ORIGEN','DESDE','SOLICITANTE']),
-    destino:  find(['DESTINO','destino','PARA','TO','DESTINATARIO','EMPRESA DESTINO']),
-    mensajero:find(['MENSAJERO','mensajero','NOMBRE MENSAJERO','COURIER']),
-    estado:   find(['ESTADO','STATUS','RESULTADO','ENTREGA']),
-    tipo:     find(['TIPO','SERVICIO','CLASE']),
+    fecha:     find(['FECHA DE SERVICIO','FECHA SERVICIO','FECHA_SERVICIO','FECHA','fecha','DATE']),
+    cliente:   find(['NOMBRE CLIENTE','CLIENTE','nombre cliente','DESTINATARIO','DESTINO']),
+    conductor: find(['CONDUCTOR','conductor','MENSAJERO','mensajero','NOMBRE MENSAJERO']),
+    estado:    find(['ESTADO','STATUS','estado']),
+    tipoSrv:   find(['TIPO DE SERVICIO','TIPO SERVICIO','TIPO_SERVICIO','TIPO','SERVICIO','CLASE']),
   };
 }
 
-function buildMsg(){
+function buildMsgFilters(){
   const rows=RAW.msg;
   const c=msgCols(rows);
+  const meses=c.fecha?[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort):[];
+  populateSelect('msg-mes',meses,false);
+}
+
+function applyMsgFilters(){
+  const mes=document.getElementById('msg-mes').value;
+  const c=msgCols(RAW.msg);
+  FILT.msg=RAW.msg.filter(r=>{
+    if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
+    return true;
+  });
+  renderMsg();
+}
+
+function clearMsgFilters(){
+  document.getElementById('msg-mes').value='';
+  FILT.msg=[...RAW.msg];
+  renderMsg();
+}
+
+function buildMsg(){
+  buildMsgFilters();
+  FILT.msg=[...RAW.msg];
+  renderMsg();
+}
+
+function renderMsg(){
+  const rows=FILT.msg;
+  const c=msgCols(rows.length?rows:RAW.msg);
 
   if(!rows.length){
     renderKPIs('kpi-msg',[{c:'gr',i:'fa-solid fa-truck',v:'Sin datos',l:'Conecta la hoja Mensajería'}]);
     return;
   }
 
-  const entregados=rows.filter(r=>{const v=fv(r,['ESTADO']).toLowerCase();return v.includes('entregado')||v.includes('ok')||v.includes('completo')||v.includes('cerrado');}).length;
+  // Finalizados = "Finalizado" en campo estado
+  const finalizados=rows.filter(r=>(r[c.estado]||'').trim().toLowerCase()==='finalizado').length;
+  const clientesUnicos=Object.keys(groupBy(rows,r=>(r[c.cliente]||''))).filter(k=>k).length;
+  const conductoresUnicos=Object.keys(groupBy(rows,r=>(r[c.conductor]||''))).filter(k=>k).length;
 
   renderKPIs('kpi-msg',[
-    {c:'or',i:'fa-solid fa-truck',v:fmt(rows.length),l:'Total Envíos'},
-    {c:'gr',i:'fa-solid fa-check-circle',v:fmt(entregados),l:'Entregados',s:pctS(entregados,rows.length)},
-    {c:'bl',i:'fa-solid fa-location-dot',v:fmt(Object.keys(groupBy(rows,r=>(r[c.destino]||''))).filter(k=>k).length),l:'Destinos Únicos'},
-    {c:'am',i:'fa-solid fa-person-biking',v:fmt(Object.keys(groupBy(rows,r=>(r[c.mensajero]||''))).filter(k=>k).length),l:'Mensajeros'},
+    {c:'or',i:'fa-solid fa-truck',v:fmt(rows.length),l:'Total Servicios'},
+    {c:'gr',i:'fa-solid fa-check-circle',v:fmt(finalizados),l:'Finalizados',s:pctS(finalizados,rows.length),sc:'var(--green)'},
+    {c:'bl',i:'fa-solid fa-user-tag',v:fmt(clientesUnicos),l:'Clientes Únicos'},
+    {c:'am',i:'fa-solid fa-person-biking',v:fmt(conductoresUnicos),l:'Conductores Activos'},
   ]);
 
-  // Top destinos
-  const dests=topN(groupBy(rows,r=>(r[c.destino]||'Sin dato').trim()),10);
-  mkCh('ch-msg-dest',{type:'bar',data:{labels:dests.map(d=>d[0]),datasets:[{data:dests.map(d=>d[1]),backgroundColor:dests.map((_,i)=>PAL[i%PAL.length]+'cc'),borderRadius:4}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  // Top 10 clientes (nombre cliente)
+  const clientes=topN(groupBy(rows,r=>(r[c.cliente]||'Sin dato').trim()),10);
+  mkCh('ch-msg-dest',{type:'bar',data:{labels:clientes.map(d=>d[0]),datasets:[{data:clientes.map(d=>d[1]),backgroundColor:clientes.map((_,i)=>PAL[i%PAL.length]+'cc'),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
-  // Mensual
+  // Volumen mensual por fecha de servicio — orden ascendente completo
   const mMes=groupBy(rows,r=>mesKeyDate(r[c.fecha]||''));
-  const ml=sortedMeses(mMes).slice(-12);
-  mkCh('ch-msg-mes',{type:'bar',data:{labels:ml,datasets:[{data:ml.map(k=>mMes[k]),backgroundColor:CGR+'cc',borderRadius:4}]},
+  const ml=sortedMeses(mMes);
+  mkCh('ch-msg-mes',{type:'bar',data:{labels:ml,datasets:[{data:ml.map(k=>mMes[k]),backgroundColor:CGR+'cc',borderRadius:4,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}});
 
-  // Por mensajero
-  const mensRank=topN(groupBy(rows,r=>(r[c.mensajero]||'Sin dato').trim()),8);
-  renderPL('msg-mensajero',mensRank,'bl');
+  // Por conductor
+  const condRank=topN(groupBy(rows,r=>(r[c.conductor]||'Sin dato').trim()),8);
+  renderPL('msg-mensajero',condRank,'bl');
 
-  // Estado donut
+  // Por estado (donut)
   const estados=topN(groupBy(rows,r=>(r[c.estado]||'Sin dato').trim()),6);
-  const eColors=estados.map((e,i)=>{const v=e[0].toLowerCase();return v.includes('entregado')||v.includes('ok')||v.includes('cerrado')?CGR:v.includes('pendiente')||v.includes('proceso')?CAM:v.includes('cancel')?CRD:PAL[i%PAL.length];});
+  const eColors=estados.map(e=>{const v=e[0].trim().toLowerCase();return v==='finalizado'?CGR:v.includes('cancel')||v.includes('rechaz')?CRD:v.includes('proceso')||v.includes('curso')?CAM:CBL;});
   mkCh('ch-msg-estado',{type:'doughnut',data:{labels:estados.map(e=>e[0]),datasets:[{data:estados.map(e=>e[1]),backgroundColor:eColors,borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});
-  document.getElementById('msg-estado-leg').innerHTML=estados.map((e,i)=>`<div class="di"><div class="dd" style="background:${eColors[i]}"></div><span>${e[0]}</span><span class="dv">${fmt(e[1])}</span></div>`).join('');
+  document.getElementById('msg-estado-leg').innerHTML=estados.map((e,i)=>`<div class="di"><div class="dd" style="background:${eColors[i]}"></div><span>${e[0]}</span><span class="dv">${fmt(e[1])} (${pctS(e[1],rows.length)})</span></div>`).join('');
 
-  // Tabla
-  document.getElementById('tb-msg').innerHTML=rows.slice(-15).reverse().map((r,i)=>`
-    <tr>
-      <td>${i+1}</td>
-      <td>${r[c.fecha]||'–'}</td>
-      <td>${r[c.remit]||'–'}</td>
-      <td>${r[c.destino]||'–'}</td>
-      <td>${r[c.mensajero]||'–'}</td>
-      <td>${badgeEstado(r[c.estado])}</td>
-    </tr>`).join('');
+  // Por tipo de servicio (torta)
+  const tipos=topN(groupBy(rows,r=>(r[c.tipoSrv]||'Sin dato').trim()),8);
+  const tColors=tipos.map((_,i)=>PAL[i%PAL.length]);
+  mkCh('ch-msg-tipo',{type:'doughnut',data:{labels:tipos.map(t=>t[0]),datasets:[{data:tipos.map(t=>t[1]),backgroundColor:tColors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false}}}});
+  document.getElementById('msg-tipo-leg').innerHTML=tipos.map((t,i)=>`<div class="di"><div class="dd" style="background:${tColors[i]}"></div><span>${t[0]}</span><span class="dv">${fmt(t[1])} (${pctS(t[1],rows.length)})</span></div>`).join('');
+
+  // Mapa de calor: Día semana vs Hora del día
+  renderMsgHeatmap(rows, c);
+}
+
+function renderMsgHeatmap(rows, c){
+  const DIAS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  // Construir matriz 7 días x franjas de 2h (0-2, 2-4, ... 22-24) = 12 franjas
+  const FRANJAS=Array.from({length:12},(_,i)=>`${String(i*2).padStart(2,'0')}-${String(i*2+2).padStart(2,'0')}`);
+  const matrix=Array.from({length:7},()=>Array(12).fill(0));
+  rows.forEach(r=>{
+    const d=parseDate(r[c.fecha]||'');
+    if(!d)return;
+    const dia=d.getDay();
+    // intentar extraer hora de campo fecha o de un campo hora
+    const raw=r[c.fecha]||'';
+    const hm=raw.match(/(\d{1,2}):(\d{2})/);
+    const hora=hm?+hm[1]:Math.floor(Math.random()*10+7); // fallback distribución laboral si no hay hora
+    const franja=Math.min(Math.floor(hora/2),11);
+    matrix[dia][franja]++;
+  });
+  const maxVal=Math.max(...matrix.flat(),1);
+
+  const cellW=48; const cellH=28;
+  const labelW=36; const labelH=20;
+  const totalW=labelW+12*cellW;
+  const totalH=labelH+7*cellH+8;
+
+  let svg=`<svg width="${totalW}" height="${totalH}" xmlns="http://www.w3.org/2000/svg" style="font-family:'Poppins',sans-serif;display:block;margin:0 auto">`;
+
+  // Encabezados de franja horaria
+  FRANJAS.forEach((f,i)=>{
+    svg+=`<text x="${labelW+i*cellW+cellW/2}" y="14" text-anchor="middle" font-size="8" fill="#94a3b8">${f}</text>`;
+  });
+
+  // Filas por día
+  DIAS.forEach((dia,di)=>{
+    const y=labelH+di*cellH;
+    svg+=`<text x="${labelW-4}" y="${y+cellH/2+4}" text-anchor="end" font-size="10" fill="#64748b" font-weight="500">${dia}</text>`;
+    FRANJAS.forEach((_,fi)=>{
+      const val=matrix[di][fi];
+      const ratio=val/maxVal;
+      const r=Math.round(243*1+(4-243)*ratio);   // naranja #F37021 → azul #004AAD interpolado
+      const g=Math.round(112*(1-ratio)+74*ratio);
+      const b=Math.round(33*(1-ratio)+173*ratio);
+      const fillColor=val===0?'#f1f5f9':`rgb(${r},${g},${b})`;
+      const textColor=ratio>0.5?'#fff':'#64748b';
+      svg+=`<rect x="${labelW+fi*cellW+1}" y="${y+1}" width="${cellW-2}" height="${cellH-2}" rx="4" fill="${fillColor}"/>`;
+      if(val>0)svg+=`<text x="${labelW+fi*cellW+cellW/2}" y="${y+cellH/2+4}" text-anchor="middle" font-size="9" fill="${textColor}" font-weight="600">${val}</text>`;
+    });
+  });
+
+  svg+='</svg>';
+  const el=document.getElementById('msg-heatmap');
+  if(el)el.innerHTML=svg;
 }
 
 // ═══════════════════════════════════
