@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <style>
 :root{
   --orange:#F37021;--orange-light:#fde8d6;--orange-dark:#d45f0f;
@@ -582,8 +583,8 @@ tbody td{padding:9px 13px;color:var(--text)}
         </div>
         <div class="card">
           <div class="ct"><i class="fa-solid fa-map-marker-alt"></i> Mapa de Servicios por Ubicación</div>
-          <div id="msg-map" style="height:300px;border-radius:10px;overflow:hidden;background:#f1f5f9;"></div>
-          <p style="font-size:11px;color:var(--muted);margin-top:8px"><i class="fa-solid fa-circle-info"></i> Cada punto representa un servicio. El color indica el estado: <span style="color:#22c55e">■</span> Finalizado <span style="color:#f59e0b;margin-left:6px">■</span> En curso <span style="color:#ef4444;margin-left:6px">■</span> Cancelado</p>
+          <div id="msg-map" style="height:340px;border-radius:10px;overflow:hidden;background:#1a1a2e;"></div>
+          <p style="font-size:11px;color:var(--muted);margin-top:8px"><i class="fa-solid fa-circle-info"></i> Mapa de calor por densidad de servicios · Azul = baja concentración · Rojo = alta concentración</p>
         </div>
       </div>
     </div>
@@ -1423,62 +1424,64 @@ function renderMsgMap(rows,c){
   const el=document.getElementById('msg-map');
   if(!el)return;
 
-  // Recopilar puntos con coordenadas válidas
-  const pts=[];
+  // Recopilar puntos con coordenadas válidas — [lat, lng, intensidad]
+  const heatPts=[];
+  const allPts=[];
   rows.forEach(r=>{
     const lat=parseFloat((r[c.lat]||'').toString().replace(',','.'));
     const lng=parseFloat((r[c.lng]||'').toString().replace(',','.'));
     if(!isNaN(lat)&&!isNaN(lng)&&lat!==0&&lng!==0){
-      const estado=(r[c.estado]||'').trim().toLowerCase();
-      const cliente=(r[c.cliente]||'Sin cliente').trim();
-      const conductor=(r[c.conductor]||'–').trim();
-      const fecha=(r[c.fecha]||'').trim();
-      const color=estado==='finalizado'?'#22c55e':estado.includes('cancel')||estado.includes('rechaz')?'#ef4444':'#f59e0b';
-      pts.push({lat,lng,color,cliente,conductor,fecha,estado:r[c.estado]||'–'});
+      heatPts.push([lat,lng,1]);
+      allPts.push([lat,lng]);
     }
   });
 
-  // Si no hay coordenadas mostrar mensaje
-  if(!pts.length){
+  // Sin coordenadas → mensaje
+  if(!heatPts.length){
+    el.style.background='#f1f5f9';
     el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;flex-direction:column;gap:8px"><i class="fa-solid fa-map-location-dot" style="font-size:32px;opacity:.4"></i><span>No se encontraron coordenadas (lat/lng) en los datos</span></div>';
     return;
   }
 
-  // Destruir mapa previo si existe
+  // Destruir mapa previo
   if(_msgMap){try{_msgMap.remove();}catch(e){} _msgMap=null;}
   el.innerHTML='';
+  el.style.background='#1a1a2e';
 
-  // Centro del mapa = promedio de coordenadas
-  const cLat=pts.reduce((s,p)=>s+p.lat,0)/pts.length;
-  const cLng=pts.reduce((s,p)=>s+p.lng,0)/pts.length;
+  // Centro = promedio de coordenadas
+  const cLat=allPts.reduce((s,p)=>s+p[0],0)/allPts.length;
+  const cLng=allPts.reduce((s,p)=>s+p[1],0)/allPts.length;
 
-  _msgMap=L.map(el,{zoomControl:true,scrollWheelZoom:false}).setView([cLat,cLng],11);
+  _msgMap=L.map(el,{zoomControl:true,scrollWheelZoom:true,attributionControl:true})
+    .setView([cLat,cLng],12);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap',maxZoom:18
+  // Tile oscuro (CartoDB Dark Matter) — resalta mejor el heatmap
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO',
+    subdomains:'abcd',
+    maxZoom:19
   }).addTo(_msgMap);
 
-  // Agregar marcadores circulares
-  pts.forEach(p=>{
-    L.circleMarker([p.lat,p.lng],{
-      radius:7,
-      fillColor:p.color,
-      color:'#fff',
-      weight:1.5,
-      opacity:1,
-      fillOpacity:0.85
-    }).bindPopup(`<div style="font-family:'Poppins',sans-serif;font-size:12px;min-width:160px">
-      <strong style="color:#1e293b">${p.cliente}</strong><br>
-      <span style="color:#64748b">Conductor:</span> ${p.conductor}<br>
-      <span style="color:#64748b">Fecha:</span> ${p.fecha}<br>
-      <span style="color:#64748b">Estado:</span> <b style="color:${p.color}">${p.estado}</b>
-    </div>`).addTo(_msgMap);
-  });
+  // Mapa de calor con leaflet.heat
+  L.heatLayer(heatPts,{
+    radius:28,
+    blur:20,
+    maxZoom:17,
+    max:1,
+    gradient:{
+      0.0:'#0000ff',
+      0.2:'#00aaff',
+      0.4:'#00ffaa',
+      0.6:'#ffff00',
+      0.8:'#ff7700',
+      1.0:'#ff0000'
+    }
+  }).addTo(_msgMap);
 
-  // Ajustar vista a todos los puntos
+  // Ajustar zoom para ver todos los puntos
   try{
-    const bounds=L.latLngBounds(pts.map(p=>[p.lat,p.lng]));
-    _msgMap.fitBounds(bounds,{padding:[20,20]});
+    const bounds=L.latLngBounds(allPts);
+    _msgMap.fitBounds(bounds,{padding:[24,24]});
   }catch(e){}
 }
 
