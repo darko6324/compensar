@@ -1,198 +1,836 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BI Compensar - Dashboard en Tiempo Real</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --compensar-orange: #F37021;
-            --compensar-blue: #004AAD;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard ANS - Compensar</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            compensarOrange: "#F37021",
+            compensarBlue: "#004AAD",
+            compensarBg: "#F8FAFC"
+          }
         }
-        .bg-compensar-orange { background-color: var(--compensar-orange); }
-        .text-compensar-orange { color: var(--compensar-orange); }
-        .bg-compensar-blue { background-color: var(--compensar-blue); }
-        .border-compensar-orange { border-color: var(--compensar-orange); }
-    </style>
+      }
+    };
+  </script>
 </head>
-<body class="bg-gray-50 font-sans">
 
-    <!-- Header -->
-    <header class="bg-compensar-blue text-white p-6 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold">BI COMPENSAR</h1>
-                <p class="text-sm opacity-80">Dashboard de Gestión y Cumplimiento ANS</p>
-            </div>
-            <div id="last-update" class="text-xs bg-white/10 p-2 rounded">
-                Cargando datos...
-            </div>
+<body class="bg-compensarBg text-slate-800 min-h-screen">
+  <header class="bg-compensarBlue text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Dashboard de No Conformidades y ANS</h1>
+        <p class="text-sm text-blue-100">Seguimiento dinámico de cumplimiento, tiempos y volumen de servicios</p>
+      </div>
+      <button id="reloadBtn" class="bg-compensarOrange hover:opacity-90 transition rounded-xl px-5 py-2 font-semibold">
+        Recargar datos
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <section id="alertBox" class="hidden mb-5 rounded-xl border-l-4 border-compensarOrange bg-orange-50 p-4 text-sm text-orange-900"></section>
+
+    <section id="loadingBox" class="mb-5 rounded-xl bg-white shadow p-5">
+      <p class="font-semibold text-compensarBlue">Cargando datos desde el CSV público...</p>
+      <p class="text-sm text-slate-500 mt-1">Los cálculos se generarán automáticamente al finalizar la carga.</p>
+    </section>
+
+    <nav class="bg-white rounded-2xl shadow p-2 mb-6 overflow-x-auto">
+      <div class="flex gap-2 min-w-max">
+        <button class="tab-btn active-tab" data-tab="tab-dashboard">Resumen Ejecutivo</button>
+        <button class="tab-btn" data-tab="tab-nc">No Conformidades</button>
+        <button class="tab-btn" data-tab="tab-respuesta">ANS Respuesta</button>
+        <button class="tab-btn" data-tab="tab-plan">ANS Plan de Acción</button>
+        <button class="tab-btn" data-tab="tab-servicios">Servicios / Áreas</button>
+      </div>
+    </nav>
+
+    <section id="tab-dashboard" class="tab-panel">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+        <article class="kpi-card">
+          <p class="kpi-label">% Cumplimiento ANS Global</p>
+          <h2 id="kpiCumplimiento" class="kpi-value text-compensarBlue">0%</h2>
+          <p class="text-xs text-slate-500 mt-2">Basado estrictamente en la columna CUMPLIMIENTO ANS = “Cumple”.</p>
+        </article>
+
+        <article class="kpi-card">
+          <p class="kpi-label">Tiempo Promedio de Respuesta</p>
+          <h2 id="kpiTiempoRespuesta" class="kpi-value text-compensarOrange">0</h2>
+          <p class="text-xs text-slate-500 mt-2">Días hábiles entre FECHA RECEPCIÓN y FECHA RESPUESTA.</p>
+        </article>
+
+        <article class="kpi-card">
+          <p class="kpi-label">Total Reclamaciones Abiertas</p>
+          <h2 id="kpiAbiertas" class="kpi-value text-compensarBlue">0</h2>
+          <p class="text-xs text-slate-500 mt-2">Según estado abierto o casos sin fecha de respuesta.</p>
+        </article>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <article class="chart-card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="section-title">Evolución mensual del cumplimiento ANS</h3>
+            <span class="badge-blue">Mensual</span>
+          </div>
+          <div class="h-80">
+            <canvas id="lineChart"></canvas>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="section-title">Volumen de servicios entre áreas</h3>
+            <span class="badge-orange">Top 5</span>
+          </div>
+          <div class="h-80">
+            <canvas id="barChart"></canvas>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="tab-nc" class="tab-panel hidden">
+      <article class="bg-white rounded-2xl shadow p-5">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <h3 class="section-title">Detalle de No Conformidades</h3>
+            <p class="text-sm text-slate-500">Filas verdes: Cumple. Filas rojas: No Cumple.</p>
+          </div>
+          <input id="searchInput" type="search" placeholder="Buscar caso, área, servicio..."
+            class="w-full md:w-80 rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-compensarBlue" />
         </div>
-    </header>
 
-    <main class="container mx-auto py-8 px-4">
-        
-        <!-- Filtros y Resumen -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-compensar-orange">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Total Casos</p>
-                <h2 id="kpi-total" class="text-4xl font-bold text-gray-800">0</h2>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">% Cumplimiento ANS</p>
-                <h2 id="kpi-ans" class="text-4xl font-bold text-green-600">0%</h2>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">T. Promedio Respuesta</p>
-                <h2 id="kpi-tiempo" class="text-4xl font-bold text-blue-600">0d</h2>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Casos Fuera de ANS</p>
-                <h2 id="kpi-fuera" class="text-4xl font-bold text-red-600">0</h2>
-            </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="min-w-full text-sm">
+            <thead class="bg-compensarBlue text-white">
+              <tr>
+                <th class="table-th">#</th>
+                <th class="table-th">Fecha Recepción</th>
+                <th class="table-th">Fecha Respuesta</th>
+                <th class="table-th">Fecha Plan Acción</th>
+                <th class="table-th">Cumplimiento ANS</th>
+                <th class="table-th">Área / Servicio</th>
+                <th class="table-th">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="detailTableBody" class="divide-y divide-slate-200"></tbody>
+          </table>
         </div>
+      </article>
+    </section>
 
-        <!-- Gráficas Principales -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <h3 class="text-lg font-bold mb-4 text-compensar-blue">Cumplimiento Mensual (Evolución)</h3>
-                <canvas id="chartEvolucion" height="150"></canvas>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <h3 class="text-lg font-bold mb-4 text-compensar-blue">Distribución por Tipo de Servicio</h3>
-                <canvas id="chartDistribucion" height="150"></canvas>
-            </div>
-        </div>
+    <section id="tab-respuesta" class="tab-panel hidden">
+      <article class="bg-white rounded-2xl shadow p-5">
+        <h3 class="section-title mb-3">ANS Respuesta</h3>
+        <p class="text-slate-600 mb-4">
+          Regla de negocio: el ANS de respuesta corresponde a <strong>1 día hábil</strong>,
+          calculado entre <strong>FECHA RECEPCIÓN</strong> y <strong>FECHA RESPUESTA</strong>.
+          El cumplimiento oficial se contabiliza desde <strong>CUMPLIMIENTO ANS = “Cumple”</strong>.
+        </p>
+        <div id="respuestaStats" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+      </article>
+    </section>
 
-        <!-- Tabla de Datos -->
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="p-6 bg-gray-100 border-b flex justify-between items-center">
-                <h3 class="font-bold text-gray-700">Detalle de No Conformidades / Gestión</h3>
-                <span class="text-xs text-gray-500 italic">Muestra los últimos 10 registros</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-600 uppercase text-xs">
-                            <th class="p-4 border-b">Fecha Recepción</th>
-                            <th class="p-4 border-b">Asunto / Motivo</th>
-                            <th class="p-4 border-b">T. Respuesta</th>
-                            <th class="p-4 border-b">Cumplimiento ANS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body" class="text-sm text-gray-700">
-                        <!-- Se llena dinámicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+    <section id="tab-plan" class="tab-panel hidden">
+      <article class="bg-white rounded-2xl shadow p-5">
+        <h3 class="section-title mb-3">ANS Plan de Acción</h3>
+        <p class="text-slate-600 mb-4">
+          Regla de negocio: el ANS del plan de acción corresponde a <strong>3 días hábiles</strong>,
+          calculado entre <strong>FECHA RECEPCIÓN</strong> y <strong>FECHA PLAN DE ACCION</strong>.
+          El cumplimiento oficial se contabiliza desde <strong>CUMPLIMIENTO ANS = “Cumple”</strong>.
+        </p>
+        <div id="planStats" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+      </article>
+    </section>
 
-    <script>
-        // URL de tu Google Sheet publicada como CSV
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub?output=csv';
+    <section id="tab-servicios" class="tab-panel hidden">
+      <article class="bg-white rounded-2xl shadow p-5">
+        <h3 class="section-title mb-3">Comparativa de volumen de servicios / áreas</h3>
+        <p class="text-slate-600 mb-4">
+          La gráfica usa la columna ÁREA, SERVICIO, ÁREA RESPONSABLE o una equivalente encontrada en el CSV.
+        </p>
+        <div id="areasList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </article>
+    </section>
+  </main>
 
-        function initDashboard() {
-            Papa.parse(SHEET_URL, {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    const data = results.data;
-                    console.log("Datos cargados:", data);
-                    processData(data);
-                    document.getElementById('last-update').innerText = 'Última actualización: ' + new Date().toLocaleTimeString();
-                },
-                error: function(err) {
-                    console.error("Error al cargar el CSV:", err);
-                    document.getElementById('last-update').innerText = 'Error al conectar con los datos';
-                }
-            });
+  <style>
+    .tab-btn {
+      padding: 0.7rem 1rem;
+      border-radius: 0.9rem;
+      font-weight: 700;
+      color: #004AAD;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      background: #eef4ff;
+    }
+
+    .active-tab {
+      background: #004AAD;
+      color: white;
+    }
+
+    .kpi-card,
+    .chart-card {
+      background: white;
+      border-radius: 1.25rem;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      padding: 1.25rem;
+    }
+
+    .kpi-label {
+      font-size: 0.85rem;
+      color: #64748b;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .kpi-value {
+      font-size: 2.4rem;
+      line-height: 1.1;
+      font-weight: 900;
+      margin-top: 0.5rem;
+    }
+
+    .section-title {
+      color: #004AAD;
+      font-weight: 900;
+      font-size: 1.15rem;
+    }
+
+    .badge-blue {
+      background: #eaf1ff;
+      color: #004AAD;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+    }
+
+    .badge-orange {
+      background: #fff2eb;
+      color: #F37021;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+    }
+
+    .table-th {
+      padding: 0.8rem;
+      text-align: left;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .table-td {
+      padding: 0.75rem;
+      vertical-align: top;
+    }
+  </style>
+
+  <script>
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub?output=csv";
+
+    let rawRows = [];
+    let normalizedRows = [];
+    let lineChartInstance = null;
+    let barChartInstance = null;
+
+    const aliases = {
+      fechaRecepcion: [
+        "FECHA RECEPCION",
+        "FECHA RECEPCIÓN",
+        "FECHA DE RECEPCION",
+        "FECHA DE RECEPCIÓN",
+        "F RECEPCION",
+        "F. RECEPCION"
+      ],
+      fechaRespuesta: [
+        "FECHA RESPUESTA",
+        "FECHA DE RESPUESTA",
+        "F RESPUESTA",
+        "F. RESPUESTA"
+      ],
+      fechaPlan: [
+        "FECHA PLAN DE ACCION",
+        "FECHA PLAN DE ACCIÓN",
+        "FECHA PLAN ACCION",
+        "FECHA PLAN ACCIÓN",
+        "FECHA DE PLAN DE ACCION",
+        "FECHA DE PLAN DE ACCIÓN"
+      ],
+      cumplimiento: [
+        "CUMPLIMIENTO ANS",
+        "CUMPLIMIENTO",
+        "ANS",
+        "CUMPLE ANS"
+      ],
+      area: [
+        "AREA",
+        "ÁREA",
+        "AREA RESPONSABLE",
+        "ÁREA RESPONSABLE",
+        "SERVICIO",
+        "SERVICIOS",
+        "PROCESO",
+        "DEPENDENCIA"
+      ],
+      estado: [
+        "ESTADO",
+        "ESTATUS",
+        "STATUS",
+        "SITUACION",
+        "SITUACIÓN"
+      ],
+      caso: [
+        "CASO",
+        "ID",
+        "RADICADO",
+        "NUMERO CASO",
+        "NÚMERO CASO",
+        "NO CONFORMIDAD",
+        "NC"
+      ]
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setupTabs();
+      setupSearch();
+      document.getElementById("reloadBtn").addEventListener("click", loadCSV);
+      loadCSV();
+    });
+
+    function setupTabs() {
+      document.querySelectorAll(".tab-btn").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active-tab"));
+          document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.add("hidden"));
+
+          button.classList.add("active-tab");
+          document.getElementById(button.dataset.tab).classList.remove("hidden");
+        });
+      });
+    }
+
+    function setupSearch() {
+      const input = document.getElementById("searchInput");
+      input.addEventListener("input", () => renderDetailTable(input.value.trim().toLowerCase()));
+    }
+
+    function loadCSV() {
+      showLoading(true);
+      showAlert("");
+
+      Papa.parse(CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: function(results) {
+          if (results.errors && results.errors.length > 0) {
+            console.warn("Errores PapaParse:", results.errors);
+          }
+
+          rawRows = Array.isArray(results.data) ? results.data.filter(row => Object.keys(row).length > 0) : [];
+
+          if (!rawRows.length) {
+            showAlert("No se encontraron registros en el CSV. Verifica que la URL pública esté publicada correctamente.");
+            showLoading(false);
+            return;
+          }
+
+          normalizedRows = rawRows.map(normalizeRow);
+          buildDashboard();
+          showLoading(false);
+        },
+        error: function(error) {
+          console.error(error);
+          showAlert("No fue posible cargar el CSV público. Revisa que la URL esté publicada, que tenga permisos públicos y que no exista bloqueo de red o CORS.");
+          showLoading(false);
+        }
+      });
+    }
+
+    function normalizeHeader(header) {
+      return String(header || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+    }
+
+    function normalizeText(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+    }
+
+    function normalizeRow(row) {
+      const normalized = {};
+
+      Object.keys(row).forEach(key => {
+        normalized[normalizeHeader(key)] = row[key];
+      });
+
+      return {
+        original: row,
+        caso: getValue(normalized, aliases.caso) || "",
+        fechaRecepcionRaw: getValue(normalized, aliases.fechaRecepcion) || "",
+        fechaRespuestaRaw: getValue(normalized, aliases.fechaRespuesta) || "",
+        fechaPlanRaw: getValue(normalized, aliases.fechaPlan) || "",
+        cumplimientoRaw: getValue(normalized, aliases.cumplimiento) || "",
+        areaRaw: getValue(normalized, aliases.area) || "Sin área / servicio",
+        estadoRaw: getValue(normalized, aliases.estado) || "",
+        fechaRecepcion: parseDate(getValue(normalized, aliases.fechaRecepcion)),
+        fechaRespuesta: parseDate(getValue(normalized, aliases.fechaRespuesta)),
+        fechaPlan: parseDate(getValue(normalized, aliases.fechaPlan)),
+        normalized
+      };
+    }
+
+    function getValue(row, possibleNames) {
+      for (const name of possibleNames) {
+        const key = normalizeHeader(name);
+        if (Object.prototype.hasOwnProperty.call(row, key)) {
+          return row[key];
+        }
+      }
+      return "";
+    }
+
+    function parseDate(value) {
+      if (!value) return null;
+
+      if (value instanceof Date && !isNaN(value)) return value;
+
+      const raw = String(value).trim();
+      if (!raw) return null;
+
+      const excelSerial = Number(raw);
+      if (!isNaN(excelSerial) && excelSerial > 25000 && excelSerial < 90000) {
+        const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+        return new Date(excelEpoch.getTime() + excelSerial * 86400000);
+      }
+
+      const cleaned = raw.split(" ")[0].replace(/\./g, "/").replace(/-/g, "/");
+      const parts = cleaned.split("/").map(Number);
+
+      if (parts.length === 3 && parts.every(part => !isNaN(part))) {
+        let day, month, year;
+
+        if (parts[0] > 1900) {
+          year = parts[0];
+          month = parts[1];
+          day = parts[2];
+        } else {
+          day = parts[0];
+          month = parts[1];
+          year = parts[2];
         }
 
-        function processData(data) {
-            // Limpieza y métricas
-            let cumpleCount = 0;
-            let totalTiempos = 0;
-            let registrosValidos = 0;
+        if (year < 100) year += 2000;
 
-            data.forEach(row => {
-                if (row['CUMPLIMIENTO ANS']) {
-                    registrosValidos++;
-                    if (row['CUMPLIMIENTO ANS'].toLowerCase().includes('cumple') && !row['CUMPLIMIENTO ANS'].toLowerCase().includes('no')) {
-                        cumpleCount++;
-                    }
-                    const t = parseFloat(row['T. RESPUESTA']) || 0;
-                    totalTiempos += t;
-                }
-            });
+        const date = new Date(year, month - 1, day);
+        if (!isNaN(date)) return date;
+      }
 
-            // Actualizar KPIs
-            document.getElementById('kpi-total').innerText = data.length;
-            const ansPerc = ((cumpleCount / registrosValidos) * 100).toFixed(1);
-            document.getElementById('kpi-ans').innerText = isNaN(ansPerc) ? '0%' : ansPerc + '%';
-            document.getElementById('kpi-tiempo').innerText = (totalTiempos / registrosValidos).toFixed(1) + 'd';
-            document.getElementById('kpi-fuera').innerText = registrosValidos - cumpleCount;
+      const fallback = new Date(raw);
+      return isNaN(fallback) ? null : fallback;
+    }
 
-            // Llenar tabla
-            const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = '';
-            data.slice(-10).reverse().forEach(row => {
-                const tr = document.createElement('tr');
-                const isCumple = row['CUMPLIMIENTO ANS']?.toLowerCase().includes('cumple') && !row['CUMPLIMIENTO ANS']?.toLowerCase().includes('no');
-                tr.innerHTML = `
-                    <td class="p-4 border-b">${row['FECHA RECEPCIÓN'] || '-'}</td>
-                    <td class="p-4 border-b">${row['MOTIVO'] || row['Asunto'] || 'Sin datos'}</td>
-                    <td class="p-4 border-b font-mono">${row['T. RESPUESTA'] || '0'} días</td>
-                    <td class="p-4 border-b">
-                        <span class="px-2 py-1 rounded-full text-xs font-bold ${isCumple ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                            ${row['CUMPLIMIENTO ANS'] || 'Pendiente'}
-                        </span>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
+    function businessDaysBetween(startDate, endDate) {
+      if (!startDate || !endDate) return null;
 
-            renderCharts();
+      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+      if (end < start) return 0;
+
+      let count = 0;
+      const current = new Date(start);
+
+      while (current < end) {
+        current.setDate(current.getDate() + 1);
+        const day = current.getDay();
+
+        if (day !== 0 && day !== 6) {
+          count++;
+        }
+      }
+
+      return count;
+    }
+
+    function isCumple(row) {
+      return normalizeText(row.cumplimientoRaw) === "CUMPLE";
+    }
+
+    function isNoCumple(row) {
+      return normalizeText(row.cumplimientoRaw) === "NO CUMPLE";
+    }
+
+    function isOpen(row) {
+      const estado = normalizeText(row.estadoRaw);
+
+      if (["ABIERTO", "ABIERTA", "EN PROCESO", "PENDIENTE", "SIN CERRAR"].includes(estado)) {
+        return true;
+      }
+
+      if (!estado && !row.fechaRespuesta) {
+        return true;
+      }
+
+      return false;
+    }
+
+    function monthKey(date) {
+      if (!date) return "Sin fecha";
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+
+      return `${year}-${month}`;
+    }
+
+    function formatDate(date, fallback = "") {
+      if (!date) return fallback || "-";
+
+      return date.toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      });
+    }
+
+    function percentage(value, total) {
+      if (!total) return 0;
+      return Math.round((value / total) * 1000) / 10;
+    }
+
+    function average(numbers) {
+      const valid = numbers.filter(number => typeof number === "number" && !isNaN(number));
+      if (!valid.length) return 0;
+
+      return Math.round((valid.reduce((sum, number) => sum + number, 0) / valid.length) * 10) / 10;
+    }
+
+    function buildDashboard() {
+      const totalCases = normalizedRows.length;
+      const totalCumple = normalizedRows.filter(isCumple).length;
+      const cumplimientoGlobal = percentage(totalCumple, totalCases);
+
+      const responseDays = normalizedRows
+        .map(row => businessDaysBetween(row.fechaRecepcion, row.fechaRespuesta))
+        .filter(value => value !== null);
+
+      const planDays = normalizedRows
+        .map(row => businessDaysBetween(row.fechaRecepcion, row.fechaPlan))
+        .filter(value => value !== null);
+
+      const avgResponseDays = average(responseDays);
+      const avgPlanDays = average(planDays);
+      const openCases = normalizedRows.filter(isOpen).length;
+
+      document.getElementById("kpiCumplimiento").textContent = `${cumplimientoGlobal}%`;
+      document.getElementById("kpiTiempoRespuesta").textContent = `${avgResponseDays} días`;
+      document.getElementById("kpiAbiertas").textContent = openCases;
+
+      renderLineChart();
+      renderBarChart();
+      renderDetailTable();
+      renderANSStats("respuestaStats", 1, responseDays, "Respuesta");
+      renderANSStats("planStats", 3, planDays, "Plan de Acción");
+      renderAreasList();
+    }
+
+    function renderLineChart() {
+      const grouped = {};
+
+      normalizedRows.forEach(row => {
+        const key = monthKey(row.fechaRecepcion);
+
+        if (!grouped[key]) {
+          grouped[key] = { total: 0, cumple: 0 };
         }
 
-        function renderCharts() {
-            // Chart de Evolución (Simulado con tendencia)
-            new Chart(document.getElementById('chartEvolucion'), {
-                type: 'line',
-                data: {
-                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                    datasets: [{
-                        label: '% Cumplimiento',
-                        data: [85, 82, 88, 90, 87, 92],
-                        borderColor: '#F37021',
-                        backgroundColor: 'rgba(243, 112, 33, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { responsive: true }
-            });
+        grouped[key].total++;
 
-            // Chart de Distribución
-            new Chart(document.getElementById('chartDistribucion'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Radicaciones', 'Inmediatos', 'No Conformidades'],
-                    datasets: [{
-                        data: [45, 25, 30],
-                        backgroundColor: ['#004AAD', '#F37021', '#94a3b8']
-                    }]
-                },
-                options: { responsive: true }
-            });
+        if (isCumple(row)) {
+          grouped[key].cumple++;
+        }
+      });
+
+      const labels = Object.keys(grouped).sort();
+      const values = labels.map(label => percentage(grouped[label].cumple, grouped[label].total));
+
+      const ctx = document.getElementById("lineChart");
+
+      if (lineChartInstance) lineChartInstance.destroy();
+
+      lineChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: "% Cumplimiento ANS",
+            data: values,
+            borderColor: "#004AAD",
+            backgroundColor: "rgba(0, 74, 173, 0.12)",
+            pointBackgroundColor: "#F37021",
+            pointBorderColor: "#F37021",
+            pointRadius: 5,
+            tension: 0.35,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: "#334155",
+                font: { weight: "bold" }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: context => `${context.raw}%`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: value => `${value}%`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderBarChart() {
+      const counts = {};
+
+      normalizedRows.forEach(row => {
+        const area = String(row.areaRaw || "Sin área / servicio").trim() || "Sin área / servicio";
+        counts[area] = (counts[area] || 0) + 1;
+      });
+
+      const sorted = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      const labels = sorted.map(item => item[0]);
+      const values = sorted.map(item => item[1]);
+
+      const ctx = document.getElementById("barChart");
+
+      if (barChartInstance) barChartInstance.destroy();
+
+      barChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Volumen de casos",
+            data: values,
+            backgroundColor: "#F37021",
+            borderColor: "#F37021",
+            borderWidth: 1,
+            borderRadius: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: "#334155",
+                font: { weight: "bold" }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: "#334155",
+                maxRotation: 35,
+                minRotation: 0
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderDetailTable(search = "") {
+      const tbody = document.getElementById("detailTableBody");
+      tbody.innerHTML = "";
+
+      const filteredRows = normalizedRows.filter(row => {
+        if (!search) return true;
+
+        const haystack = [
+          row.caso,
+          row.fechaRecepcionRaw,
+          row.fechaRespuestaRaw,
+          row.fechaPlanRaw,
+          row.cumplimientoRaw,
+          row.areaRaw,
+          row.estadoRaw
+        ].join(" ").toLowerCase();
+
+        return haystack.includes(search);
+      });
+
+      filteredRows.forEach((row, index) => {
+        const tr = document.createElement("tr");
+
+        if (isCumple(row)) {
+          tr.className = "bg-green-50 hover:bg-green-100";
+        } else if (isNoCumple(row)) {
+          tr.className = "bg-red-50 hover:bg-red-100";
+        } else {
+          tr.className = "hover:bg-slate-50";
         }
 
-        window.onload = initDashboard;
-    </script>
+        tr.innerHTML = `
+          <td class="table-td font-semibold">${escapeHTML(row.caso || index + 1)}</td>
+          <td class="table-td">${formatDate(row.fechaRecepcion, row.fechaRecepcionRaw)}</td>
+          <td class="table-td">${formatDate(row.fechaRespuesta, row.fechaRespuestaRaw)}</td>
+          <td class="table-td">${formatDate(row.fechaPlan, row.fechaPlanRaw)}</td>
+          <td class="table-td">
+            <span class="${isCumple(row) ? "bg-green-100 text-green-800" : isNoCumple(row) ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-700"} rounded-full px-3 py-1 text-xs font-bold">
+              ${escapeHTML(row.cumplimientoRaw || "Sin dato")}
+            </span>
+          </td>
+          <td class="table-td">${escapeHTML(row.areaRaw || "Sin dato")}</td>
+          <td class="table-td">${escapeHTML(row.estadoRaw || "-")}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      if (!filteredRows.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="p-6 text-center text-slate-500">
+              No hay registros que coincidan con la búsqueda.
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    function renderANSStats(containerId, threshold, daysArray, label) {
+      const container = document.getElementById(containerId);
+
+      const validCount = daysArray.length;
+      const averageDays = average(daysArray);
+      const calculatedComplies = daysArray.filter(days => days <= threshold).length;
+      const calculatedCompliance = percentage(calculatedComplies, validCount);
+
+      container.innerHTML = `
+        <article class="rounded-2xl border border-slate-200 p-5">
+          <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">ANS ${label}</p>
+          <h4 class="text-3xl font-black text-compensarBlue mt-2">${threshold} día${threshold > 1 ? "s" : ""} hábil${threshold > 1 ? "es" : ""}</h4>
+          <p class="text-sm text-slate-500 mt-2">Umbral de referencia operativo.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-5">
+          <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">Promedio calculado</p>
+          <h4 class="text-3xl font-black text-compensarOrange mt-2">${averageDays} días</h4>
+          <p class="text-sm text-slate-500 mt-2">Cálculo dinámico en días hábiles.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-5">
+          <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">Cumplimiento calculado por fecha</p>
+          <h4 class="text-3xl font-black text-compensarBlue mt-2">${calculatedCompliance}%</h4>
+          <p class="text-sm text-slate-500 mt-2">Referencia técnica; el KPI oficial usa CUMPLIMIENTO ANS.</p>
+        </article>
+      `;
+    }
+
+    function renderAreasList() {
+      const counts = {};
+
+      normalizedRows.forEach(row => {
+        const area = String(row.areaRaw || "Sin área / servicio").trim() || "Sin área / servicio";
+        counts[area] = (counts[area] || 0) + 1;
+      });
+
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const total = normalizedRows.length;
+
+      document.getElementById("areasList").innerHTML = sorted.map(([area, count]) => {
+        const pct = percentage(count, total);
+
+        return `
+          <article class="rounded-2xl border border-slate-200 p-5">
+            <p class="font-black text-compensarBlue">${escapeHTML(area)}</p>
+            <p class="text-3xl font-black text-compensarOrange mt-2">${count}</p>
+            <p class="text-sm text-slate-500 mt-1">${pct}% del total de casos</p>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function showAlert(message) {
+      const alertBox = document.getElementById("alertBox");
+
+      if (!message) {
+        alertBox.classList.add("hidden");
+        alertBox.textContent = "";
+        return;
+      }
+
+      alertBox.textContent = message;
+      alertBox.classList.remove("hidden");
+    }
+
+    function showLoading(isLoading) {
+      const loadingBox = document.getElementById("loadingBox");
+      loadingBox.classList.toggle("hidden", !isLoading);
+    }
+
+    function escapeHTML(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
 </body>
 </html>
