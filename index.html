@@ -405,7 +405,7 @@ tbody td{padding:9px 13px;color:var(--text)}
       </div>
 
       <div class="filters">
-        <label>Mes (Mes FAC)
+        <label>Mes (por Fecha)
           <select id="inm-mes" onchange="applyInmFilters()"><option value="">Todos</option></select>
         </label>
         <button class="btn-clear" onclick="clearInmFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
@@ -440,7 +440,7 @@ tbody td{padding:9px 13px;color:var(--text)}
         <div class="ct"><i class="fa-solid fa-table"></i> Detalle de Órdenes</div>
         <div class="tw">
           <table id="t-inm">
-            <thead><tr><th>#</th><th>Mes FAC</th><th>N° Orden</th><th>Proceso</th><th>Servicio</th><th>Estado</th></tr></thead>
+            <thead><tr><th>#</th><th>Fecha</th><th>N° Orden</th><th>Proceso</th><th>Servicio</th><th>Estado</th></tr></thead>
             <tbody id="tb-inm"></tbody>
           </table>
         </div>
@@ -967,20 +967,18 @@ function inmCols(rows){
   const h=Object.keys(rows[0]);
   const find=cands=>{for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}return null;};
   return{
-    orden:  find(['N° ORDEN','N ORDEN','ORDEN','NO ORDEN','#ORDEN','NUMERO ORDEN']),
-    mes:    find(['MES FAC','MES','MESFAC','MES FACTURACIÓN','MES FACTURACION']),
-    proceso:find(['PROCESO']),
+    orden:   find(['N° ORDEN','N ORDEN','ORDEN','NO ORDEN','#ORDEN','NUMERO ORDEN']),
+    proceso: find(['PROCESO']),
     servicio:find(['SERVICIO']),
-    estado: find(['ESTADO','STATUS']),
-    fecha:  find(['FECHA','DATE','FECHA RADICACION']),
+    estado:  find(['ESTADO','STATUS']),
+    fecha:   find(['FECHA','DATE','FECHA RADICACION','FECHA ENVIO']),
   };
 }
 
 function buildInmFilters(){
   const rows=RAW.inm;
   const c=inmCols(rows);
-  const meses=c.mes?[...new Set(rows.map(r=>(r[c.mes]||'').trim()).filter(Boolean))].sort()
-    :[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort);
+  const meses=[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort);
   populateSelect('inm-mes',meses,false);
 }
 
@@ -988,10 +986,7 @@ function applyInmFilters(){
   const mes=document.getElementById('inm-mes').value;
   const c=inmCols(RAW.inm);
   FILT.inm=RAW.inm.filter(r=>{
-    if(mes){
-      const v=c.mes?(r[c.mes]||'').trim():mesKeyDate(r[c.fecha]||'');
-      if(v!==mes)return false;
-    }
+    if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
     return true;
   });
   renderInm();
@@ -1031,18 +1026,19 @@ function renderInm(){
     {c:'bl',i:'fa-solid fa-sitemap',v:fmt(procesos),l:'Procesos Activos'},
   ]);
 
-  // Órdenes por mes
-  const getMes=r=>c.mes?(r[c.mes]||'Sin dato').trim():mesKeyDate(r[c.fecha]||'');
+  // Órdenes por mes — agrupado por FECHA campo, orden cronológico ascendente
+  const getMes=r=>mesKeyDate(r[c.fecha]||'');
   const mesCounts={};
   const mesOrdenes={};
   rows.forEach(r=>{
     const m=getMes(r);
+    if(m==='Sin fecha')return;
     if(!mesOrdenes[m])mesOrdenes[m]=new Set();
     const ord=fv(r,['N° ORDEN','N ORDEN','ORDEN']).trim();
     if(ord)mesOrdenes[m].add(ord);
     mesCounts[m]=(mesCounts[m]||0)+1;
   });
-  const ml=Object.keys(mesCounts).sort();
+  const ml=sortedMeses(mesCounts);
   const ordCount=ml.map(k=>mesOrdenes[k]?mesOrdenes[k].size:0);
   mkCh('ch-inm-ordenes',{type:'bar',data:{labels:ml,datasets:[{data:ordCount,backgroundColor:CAM+'cc',borderRadius:5,borderSkipped:false,label:'Órdenes distintas'}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},ticks:{stepSize:1}}}}});
@@ -1066,7 +1062,7 @@ function renderInm(){
   document.getElementById('tb-inm').innerHTML=rows.slice(-20).reverse().map((r,i)=>`
     <tr>
       <td>${i+1}</td>
-      <td>${getMes(r)}</td>
+      <td>${r[c.fecha]||'–'}</td>
       <td><strong>${fv(r,['N° ORDEN','N ORDEN','ORDEN'])||'–'}</strong></td>
       <td>${fv(r,['PROCESO'])||'–'}</td>
       <td>${fv(r,['SERVICIO'])||'–'}</td>
