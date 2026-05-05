@@ -1,1665 +1,1419 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BI Compensar – Dashboard Integral</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BI Compensar – Dashboard Integral v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <style>
-  :root {
-    --orange: #F37021;
-    --orange-light: #fde8d6;
-    --orange-dark: #d45f0f;
-    --blue: #004AAD;
-    --blue-light: #e0ebff;
-    --blue-dark: #003280;
-    --white: #FFFFFF;
-    --bg: #F1F5F9;
-    --card: #FFFFFF;
-    --text: #1e293b;
-    --text-muted: #64748b;
-    --border: #e2e8f0;
-    --success: #22c55e;
-    --danger: #ef4444;
-    --warning: #f59e0b;
-    --sidebar-w: 240px;
-    --radius: 14px;
-    --shadow: 0 2px 16px rgba(0,0,0,0.07);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
-  }
+:root{
+  --orange:#F37021;--orange-light:#fde8d6;--orange-dark:#d45f0f;
+  --blue:#004AAD;--blue-light:#e0ebff;--blue-dark:#003280;
+  --white:#FFFFFF;--bg:#F1F5F9;--card:#FFFFFF;
+  --text:#1e293b;--muted:#64748b;--border:#e2e8f0;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;
+  --sw:240px;--r:14px;
+  --sh:0 2px 16px rgba(0,0,0,.07);
+  --shl:0 8px 32px rgba(0,0,0,.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* LOADING */
+#lo{position:fixed;inset:0;background:linear-gradient(135deg,#003280,#004AAD);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s}
+.lo-icon{width:72px;height:72px;background:var(--orange);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:900;margin:0 auto 16px;box-shadow:0 8px 32px rgba(243,112,33,.4)}
+#lo h2{color:#fff;font-size:22px;font-weight:700}
+#lo p{color:rgba(255,255,255,.6);font-size:13px;margin-top:4px}
+.lo-bar-wrap{width:280px;height:4px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden;margin-top:24px}
+.lo-bar{height:100%;width:0;background:var(--orange);border-radius:99px;transition:width .4s}
+#lo-status{margin-top:12px;font-size:12px;color:rgba(255,255,255,.5)}
 
-  body {
-    font-family: 'Poppins', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+/* SIDEBAR */
+#sidebar{width:var(--sw);background:linear-gradient(160deg,#003280 0%,#004AAD 60%,#0060d6 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;box-shadow:4px 0 24px rgba(0,74,173,.25)}
+.sb-logo{padding:26px 20px 18px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:12px}
+.sb-logo-icon{width:38px;height:38px;background:var(--orange);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:900;flex-shrink:0}
+.sb-logo strong{color:#fff;font-size:15px;font-weight:700;display:block}
+.sb-logo small{color:rgba(255,255,255,.55);font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+.sb-sec{padding:16px 20px 4px;font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.4)}
+.nav{display:flex;align-items:center;gap:11px;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,.72);font-size:13px;font-weight:500;transition:all .2s;border-left:3px solid transparent}
+.nav i{width:18px;text-align:center;font-size:13px}
+.nav:hover{background:rgba(255,255,255,.08);color:#fff;border-left-color:var(--orange)}
+.nav.active{background:rgba(243,112,33,.18);color:#fff;border-left-color:var(--orange);font-weight:600}
+.nav .nb{margin-left:auto;background:var(--orange);color:#fff;font-size:9px;padding:2px 6px;border-radius:99px;font-weight:700}
+.sb-footer{margin-top:auto;padding:14px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:8px}
 
-  /* ── SIDEBAR ── */
-  #sidebar {
-    width: var(--sidebar-w);
-    background: linear-gradient(160deg, #003280 0%, #004AAD 60%, #0060d6 100%);
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0; left: 0; bottom: 0;
-    z-index: 100;
-    box-shadow: 4px 0 24px rgba(0,74,173,0.25);
-    transition: transform .3s ease;
-  }
+/* MAIN */
+#main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-width:0}
 
-  .sidebar-logo {
-    padding: 28px 20px 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.12);
-    display: flex; align-items: center; gap: 12px;
-  }
-  .logo-icon {
-    width: 38px; height: 38px;
-    background: var(--orange);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: #fff; font-weight: 800;
-    flex-shrink: 0;
-  }
-  .logo-text { color: #fff; }
-  .logo-text strong { font-size: 15px; font-weight: 700; display: block; }
-  .logo-text small { font-size: 10px; opacity: .65; letter-spacing: .5px; text-transform: uppercase; }
+/* TOPBAR */
+#topbar{background:#fff;border-bottom:1px solid var(--border);padding:13px 26px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 1px 8px rgba(0,0,0,.05)}
+#topbar h1{font-size:16px;font-weight:700}
+#topbar p{font-size:12px;color:var(--muted)}
+.refresh-btn{background:var(--orange);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Poppins',sans-serif;transition:background .2s}
+.refresh-btn:hover{background:var(--orange-dark)}
+#last-upd{font-size:11px;color:var(--muted)}
 
-  .sidebar-section-label {
-    padding: 18px 20px 6px;
-    font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.45);
-  }
+/* PAGE */
+#pc{padding:22px 26px;flex:1}
+.page{display:none}
+.page.active{display:block;animation:fi .3s ease}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-  .nav-item {
-    display: flex; align-items: center; gap: 11px;
-    padding: 11px 20px;
-    cursor: pointer;
-    border-radius: 0;
-    color: rgba(255,255,255,0.72);
-    font-size: 13px;
-    font-weight: 500;
-    transition: all .2s;
-    position: relative;
-    border-left: 3px solid transparent;
-    margin: 1px 0;
-    text-decoration: none;
-  }
-  .nav-item i { width: 18px; text-align: center; font-size: 14px; }
-  .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; border-left-color: var(--orange); }
-  .nav-item.active {
-    background: rgba(243,112,33,0.18);
-    color: #fff;
-    border-left-color: var(--orange);
-    font-weight: 600;
-  }
-  .nav-badge {
-    margin-left: auto;
-    background: var(--orange);
-    color: #fff;
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 99px;
-    font-weight: 700;
-  }
+/* SECTION HEADER */
+.sh{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--border)}
+.sh h2{font-size:19px;font-weight:800}
+.sh p{font-size:12px;color:var(--muted);margin-top:3px}
+.sbadge{background:var(--orange-light);color:var(--orange-dark);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap}
 
-  .sidebar-footer {
-    margin-top: auto;
-    padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    display: flex; align-items: center; gap: 8px;
-  }
+/* FILTERS BAR */
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;padding:14px 16px;background:#fff;border-radius:10px;border:1px solid var(--border);box-shadow:var(--sh)}
+.filters label{font-size:11px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.filters select,.filters input[type=date],.filters input[type=text]{padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:'Poppins',sans-serif;color:var(--text);background:#fff;cursor:pointer;min-width:140px}
+.filters select:focus,.filters input:focus{outline:none;border-color:var(--orange)}
+.btn-clear{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Poppins',sans-serif;align-self:flex-end}
+.btn-clear:hover{background:var(--border)}
 
-  /* ── MAIN CONTENT ── */
-  #main {
-    margin-left: var(--sidebar-w);
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
+/* CARDS */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:18px 20px;border:1px solid var(--border)}
+.ct{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.ct i{color:var(--orange)}
 
-  /* ── TOP BAR ── */
-  #topbar {
-    background: var(--white);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky; top: 0; z-index: 50;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.05);
-  }
-  .topbar-left h1 { font-size: 16px; font-weight: 700; color: var(--text); }
-  .topbar-left p { font-size: 12px; color: var(--text-muted); }
-  .topbar-right { display: flex; align-items: center; gap: 12px; }
-  .refresh-btn {
-    background: var(--orange); color: #fff;
-    border: none; border-radius: 8px;
-    padding: 8px 16px; font-size: 12px; font-weight: 600;
-    cursor: pointer; display: flex; align-items: center; gap: 6px;
-    font-family: 'Poppins', sans-serif;
-    transition: background .2s;
-  }
-  .refresh-btn:hover { background: var(--orange-dark); }
-  #last-update { font-size: 11px; color: var(--text-muted); }
+/* KPI GRID */
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.kc{background:var(--card);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);border:1px solid var(--border);border-top:4px solid}
+.kc.or{border-top-color:var(--orange)}
+.kc.bl{border-top-color:var(--blue)}
+.kc.gr{border-top-color:var(--green)}
+.kc.rd{border-top-color:var(--red)}
+.kc.am{border-top-color:var(--amber)}
+.ki{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
+.kc.or .ki{background:var(--orange-light);color:var(--orange)}
+.kc.bl .ki{background:var(--blue-light);color:var(--blue)}
+.kc.gr .ki{background:#dcfce7;color:var(--green)}
+.kc.rd .ki{background:#fee2e2;color:var(--red)}
+.kc.am .ki{background:#fef3c7;color:var(--amber)}
+.kv{font-size:28px;font-weight:800;line-height:1;color:var(--text)}
+.kl{font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.ks{font-size:11px;margin-top:5px;font-weight:600}
 
-  /* ── PAGE CONTAINER ── */
-  #page-container {
-    padding: 24px 28px;
-    flex: 1;
-  }
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:18px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px}
 
-  .page { display: none; }
-  .page.active { display: block; animation: fadeIn .3s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+/* CHART */
+.cw{position:relative;height:260px}
+.cw.t{height:320px}
+.cw.s{height:200px}
+.cw.xs{height:160px}
 
-  /* ── LOADING OVERLAY ── */
-  #loading-overlay {
-    position: fixed; inset: 0;
-    background: linear-gradient(135deg, #003280 0%, #004AAD 100%);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    z-index: 9999;
-    transition: opacity .6s ease;
-  }
-  .loading-logo { margin-bottom: 32px; text-align: center; }
-  .loading-logo .big-icon {
-    width: 72px; height: 72px;
-    background: var(--orange);
-    border-radius: 20px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px; color: #fff; font-weight: 900;
-    margin: 0 auto 16px;
-    box-shadow: 0 8px 32px rgba(243,112,33,0.4);
-  }
-  .loading-logo h2 { color: #fff; font-size: 22px; font-weight: 700; }
-  .loading-logo p { color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 4px; }
-  .loading-bar-wrap { width: 280px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 99px; overflow: hidden; }
-  .loading-bar { height: 100%; width: 0%; background: var(--orange); border-radius: 99px; transition: width .4s ease; }
-  .loading-status { margin-top: 14px; font-size: 12px; color: rgba(255,255,255,0.55); }
+/* TABLES */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--bg);padding:9px 13px;text-align:left;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:hover{background:#fafbfc}
+tbody td{padding:9px 13px;color:var(--text)}
 
-  /* ── CARDS ── */
-  .card {
-    background: var(--card);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 20px;
-    border: 1px solid var(--border);
-  }
-  .card-title {
-    font-size: 13px; font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    margin-bottom: 16px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .card-title i { color: var(--orange); }
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.badge.gr{background:#dcfce7;color:#15803d}
+.badge.rd{background:#fee2e2;color:#b91c1c}
+.badge.am{background:#fef3c7;color:#92400e}
+.badge.bl{background:var(--blue-light);color:var(--blue)}
+.badge.or{background:var(--orange-light);color:var(--orange-dark)}
 
-  /* ── KPI BIG NUMBERS ── */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-  .kpi-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 20px 22px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    border-top: 4px solid;
-    position: relative;
-    overflow: hidden;
-  }
-  .kpi-card::after {
-    content: '';
-    position: absolute;
-    right: -10px; top: -10px;
-    width: 70px; height: 70px;
-    border-radius: 50%;
-    opacity: .06;
-    background: currentColor;
-  }
-  .kpi-card.orange { border-top-color: var(--orange); color: var(--orange); }
-  .kpi-card.blue   { border-top-color: var(--blue);   color: var(--blue); }
-  .kpi-card.green  { border-top-color: var(--success); color: var(--success); }
-  .kpi-card.red    { border-top-color: var(--danger);  color: var(--danger); }
-  .kpi-card.amber  { border-top-color: var(--warning); color: var(--warning); }
+/* PROGRESS */
+.pl{display:flex;flex-direction:column;gap:12px}
+.pi label{font-size:11.5px;font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px}
+.pt{height:7px;background:var(--bg);border-radius:99px;overflow:hidden}
+.pf{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--orange),var(--orange-dark));transition:width .8s}
+.pf.bl{background:linear-gradient(90deg,var(--blue),var(--blue-dark))}
+.pf.gr{background:linear-gradient(90deg,var(--green),#15803d)}
 
-  .kpi-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    margin-bottom: 12px;
-  }
-  .kpi-card.orange .kpi-icon { background: var(--orange-light); color: var(--orange); }
-  .kpi-card.blue   .kpi-icon { background: var(--blue-light);   color: var(--blue); }
-  .kpi-card.green  .kpi-icon { background: #dcfce7; color: var(--success); }
-  .kpi-card.red    .kpi-icon { background: #fee2e2; color: var(--danger); }
-  .kpi-card.amber  .kpi-icon { background: #fef3c7; color: var(--warning); }
+/* DONUT LEGEND */
+.dl{display:flex;flex-direction:column;gap:9px}
+.di{display:flex;align-items:center;gap:9px;font-size:12px}
+.dd{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+.dv{margin-left:auto;font-weight:700}
 
-  .kpi-value { font-size: 30px; font-weight: 800; line-height: 1; margin-bottom: 4px; color: var(--text); }
-  .kpi-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-  .kpi-sub { font-size: 11px; margin-top: 6px; font-weight: 600; }
+/* GAUGE */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center}
+.gauge-val{font-size:34px;font-weight:800;color:var(--text);margin-top:-15px}
+.gauge-lbl{font-size:11px;color:var(--muted);margin-top:2px}
 
-  /* ── GRID LAYOUTS ── */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 20px; }
-  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+/* ANS BARS */
+.ans-b{margin-bottom:14px}
+.ans-h{display:flex;justify-content:space-between;margin-bottom:5px}
+.ans-h span{font-size:12px;font-weight:600}
+.ans-tr{height:18px;background:#fee2e2;border-radius:99px;overflow:hidden}
+.ans-f{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),#15803d);display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 1s}
+.ans-f span{font-size:10px;font-weight:700;color:#fff}
 
-  /* ── CHART WRAPPERS ── */
-  .chart-wrap { position: relative; height: 280px; }
-  .chart-wrap.tall { height: 350px; }
-  .chart-wrap.short { height: 200px; }
+/* STAT PILL */
+.sp{display:flex;align-items:center;gap:11px;background:var(--bg);border-radius:9px;padding:11px 14px;margin-bottom:9px}
+.sp-i{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.sp-v{font-size:17px;font-weight:800;color:var(--text)}
+.sp-l{font-size:10.5px;color:var(--muted)}
 
-  /* ── TABLES ── */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  thead th {
-    background: var(--bg);
-    padding: 10px 14px;
-    text-align: left;
-    font-weight: 700;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    color: var(--text-muted);
-    border-bottom: 2px solid var(--border);
-  }
-  tbody tr { border-bottom: 1px solid var(--border); }
-  tbody tr:hover { background: #fafbfc; }
-  tbody td { padding: 10px 14px; color: var(--text); }
+/* OBS LIST */
+.obs-list{display:flex;flex-direction:column;gap:10px;max-height:320px;overflow-y:auto}
+.obs-item{background:var(--bg);border-radius:9px;padding:12px 14px;border-left:3px solid var(--orange)}
+.obs-meta{font-size:10.5px;color:var(--muted);margin-bottom:4px;display:flex;gap:12px}
+.obs-meta strong{color:var(--orange)}
+.obs-txt{font-size:12.5px;color:var(--text);line-height:1.5}
 
-  /* ── BADGES ── */
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 10px;
-    border-radius: 99px;
-    font-size: 11px;
-    font-weight: 700;
-  }
-  .badge.green  { background: #dcfce7; color: #15803d; }
-  .badge.red    { background: #fee2e2; color: #b91c1c; }
-  .badge.amber  { background: #fef3c7; color: #92400e; }
-  .badge.blue   { background: var(--blue-light); color: var(--blue); }
-  .badge.orange { background: var(--orange-light); color: var(--orange-dark); }
+/* INTRO */
+.hero{background:linear-gradient(135deg,#003280,#004AAD 60%,#0060d6);border-radius:18px;padding:44px 48px;color:#fff;margin-bottom:22px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;right:-50px;top:-50px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.04)}
+.hero::after{content:'';position:absolute;right:70px;bottom:-70px;width:180px;height:180px;border-radius:50%;background:rgba(243,112,33,.1)}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);padding:4px 13px;border-radius:99px;font-size:10.5px;font-weight:600;margin-bottom:14px;color:rgba(255,255,255,.9)}
+.hero h2{font-size:26px;font-weight:800;margin-bottom:7px}
+.hero p{opacity:.8;font-size:13.5px;max-width:520px;line-height:1.7}
 
-  /* ── INTRO PAGE ── */
-  .intro-hero {
-    background: linear-gradient(135deg, #003280 0%, #004AAD 60%, #0060d6 100%);
-    border-radius: 20px;
-    padding: 48px 52px;
-    color: #fff;
-    margin-bottom: 28px;
-    position: relative;
-    overflow: hidden;
-  }
-  .intro-hero::before {
-    content: '';
-    position: absolute;
-    right: -60px; top: -60px;
-    width: 300px; height: 300px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-  }
-  .intro-hero::after {
-    content: '';
-    position: absolute;
-    right: 80px; bottom: -80px;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: rgba(243,112,33,0.12);
-  }
-  .intro-hero h2 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-  .intro-hero p { opacity: .8; font-size: 14px; max-width: 560px; line-height: 1.7; }
-  .intro-tag {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,0.12);
-    padding: 5px 14px; border-radius: 99px;
-    font-size: 11px; font-weight: 600;
-    margin-bottom: 16px; color: rgba(255,255,255,0.9);
-  }
-  .intro-tag span { color: var(--orange); }
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;margin-bottom:22px}
+.flow::before{content:'';position:absolute;top:38px;left:12%;width:76%;height:2px;background:linear-gradient(90deg,var(--orange),var(--blue));z-index:0}
+.fs{text-align:center;position:relative;z-index:1;padding:0 6px;cursor:pointer;transition:transform .2s}
+.fs:hover{transform:translateY(-4px)}
+.fc{width:62px;height:62px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(0,0,0,.12);border:3px solid #fff}
+.fs h4{font-size:11.5px;font-weight:700;color:var(--text)}
+.fs p{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4}
 
-  .flow-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0;
-    margin-bottom: 28px;
-    position: relative;
-  }
-  .flow-grid::before {
-    content: '';
-    position: absolute;
-    top: 50%; left: 10%;
-    width: 80%; height: 2px;
-    background: linear-gradient(90deg, var(--orange), var(--blue));
-    transform: translateY(-50%);
-    z-index: 0;
-  }
-  .flow-step {
-    text-align: center;
-    position: relative;
-    z-index: 1;
-    padding: 0 8px;
-    cursor: pointer;
-    transition: transform .2s;
-  }
-  .flow-step:hover { transform: translateY(-4px); }
-  .flow-circle {
-    width: 64px; height: 64px;
-    border-radius: 50%;
-    margin: 0 auto 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    border: 3px solid #fff;
-  }
-  .flow-step h4 { font-size: 12px; font-weight: 700; color: var(--text); }
-  .flow-step p { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+.mg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.mc{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative}
+.mc:hover{transform:translateY(-3px);box-shadow:var(--shl);border-color:var(--orange)}
+.mc .mi{width:46px;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px}
+.mc h3{font-size:13.5px;font-weight:700;margin-bottom:5px}
+.mc p{font-size:11.5px;color:var(--muted);line-height:1.5}
+.mc .ma{position:absolute;right:16px;top:20px;color:var(--muted);font-size:13px;transition:transform .2s}
+.mc:hover .ma{transform:translateX(4px);color:var(--orange)}
 
-  .modules-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 24px;
-  }
-  .module-card {
-    background: var(--card);
-    border-radius: var(--radius);
-    padding: 22px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    cursor: pointer;
-    transition: all .2s;
-    position: relative;
-    overflow: hidden;
-  }
-  .module-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--orange);
-  }
-  .module-card .mod-icon {
-    width: 48px; height: 48px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    margin-bottom: 14px;
-  }
-  .module-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-  .module-card p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-  .module-card .mod-arrow {
-    position: absolute; right: 18px; top: 22px;
-    color: var(--text-muted); font-size: 14px;
-    transition: transform .2s;
-  }
-  .module-card:hover .mod-arrow { transform: translateX(4px); color: var(--orange); }
+/* TIMELINE */
+.tl{position:relative;padding-left:26px}
+.tl::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:var(--border)}
+.tli{position:relative;margin-bottom:18px}
+.tld{position:absolute;left:-22px;top:4px;width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor}
+.tli h4{font-size:12.5px;font-weight:700}
+.tli p{font-size:11.5px;color:var(--muted);margin-top:2px}
 
-  /* ── GAUGE ── */
-  .gauge-container { display: flex; flex-direction: column; align-items: center; }
-  .gauge-value { font-size: 36px; font-weight: 800; color: var(--text); margin-top: -20px; }
-  .gauge-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
 
-  /* ── DONUT LEGEND ── */
-  .donut-legend { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
-  .legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
-  .legend-val { margin-left: auto; font-weight: 700; }
-
-  /* ── PROGRESS BARS ── */
-  .progress-list { display: flex; flex-direction: column; gap: 14px; }
-  .progress-item label { font-size: 12px; font-weight: 600; color: var(--text); display: flex; justify-content: space-between; margin-bottom: 5px; }
-  .progress-track { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--orange), var(--orange-dark)); transition: width 1s ease; }
-  .progress-fill.blue { background: linear-gradient(90deg, var(--blue), var(--blue-dark)); }
-
-  /* ── TREEMAP ── */
-  #treemapContainer {
-    display: grid;
-    gap: 3px;
-    height: 280px;
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .treemap-cell {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: 6px;
-    border-radius: 6px;
-    cursor: default;
-    transition: filter .2s;
-    text-align: center;
-  }
-  .treemap-cell:hover { filter: brightness(.9); }
-  .treemap-cell span { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.2; }
-  .treemap-cell small { font-size: 10px; color: rgba(255,255,255,.75); }
-
-  /* ── TIMELINE ── */
-  .timeline { position: relative; padding-left: 28px; }
-  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
-  .tl-item { position: relative; margin-bottom: 20px; }
-  .tl-dot { position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 2px currentColor; }
-  .tl-item h4 { font-size: 13px; font-weight: 700; }
-  .tl-item p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-
-  /* ── ANS METER ── */
-  .ans-bar-wrap { margin-bottom: 16px; }
-  .ans-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .ans-header span { font-size: 13px; font-weight: 600; }
-  .ans-track { height: 20px; background: #fee2e2; border-radius: 99px; overflow: hidden; position: relative; }
-  .ans-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #22c55e, #16a34a); position: relative; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
-  .ans-fill span { font-size: 11px; font-weight: 700; color: #fff; }
-
-  /* ── STAT PILL ── */
-  .stat-pill {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--bg); border-radius: 10px; padding: 12px 16px;
-    margin-bottom: 10px;
-  }
-  .stat-pill .sp-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-  .stat-pill .sp-val { font-size: 18px; font-weight: 800; color: var(--text); }
-  .stat-pill .sp-label { font-size: 11px; color: var(--text-muted); }
-
-  /* ── SECTION HEADER ── */
-  .section-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    margin-bottom: 22px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--border);
-  }
-  .section-header h2 { font-size: 20px; font-weight: 800; color: var(--text); }
-  .section-header p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
-  .section-badge {
-    background: var(--orange-light);
-    color: var(--orange-dark);
-    padding: 6px 14px; border-radius: 8px;
-    font-size: 12px; font-weight: 700;
-    white-space: nowrap;
-    display: flex; align-items: center; gap: 6px;
-  }
-
-  /* ── EMPTY STATE ── */
-  .empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); }
-  .empty-state i { font-size: 40px; margin-bottom: 12px; opacity: .4; }
-  .empty-state p { font-size: 13px; }
-
-  /* ── SCROLL ── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-
-  @media (max-width: 900px) {
-    #sidebar { transform: translateX(-100%); }
-    #main { margin-left: 0; }
-    .grid-2, .grid-3, .grid-1-2, .grid-2-1 { grid-template-columns: 1fr; }
-    .flow-grid { grid-template-columns: 1fr 1fr; }
-    .modules-grid { grid-template-columns: 1fr 1fr; }
-  }
+@media(max-width:900px){
+  #sidebar{transform:translateX(-100%)}
+  #main{margin-left:0}
+  .g2,.g3,.g12,.g21{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .mg{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
 
-<!-- LOADING OVERLAY -->
-<div id="loading-overlay">
-  <div class="loading-logo">
-    <div class="big-icon">C</div>
+<!-- LOADING -->
+<div id="lo">
+  <div style="text-align:center">
+    <div class="lo-icon">C</div>
     <h2>Compensar BI</h2>
     <p>Cargando datos en tiempo real…</p>
   </div>
-  <div class="loading-bar-wrap">
-    <div class="loading-bar" id="loadingBar"></div>
-  </div>
-  <div class="loading-status" id="loadingStatus">Conectando con Google Sheets…</div>
+  <div class="lo-bar-wrap"><div class="lo-bar" id="loBar"></div></div>
+  <div id="lo-status">Conectando con Google Sheets…</div>
 </div>
 
 <!-- SIDEBAR -->
 <nav id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">C</div>
-    <div class="logo-text">
-      <strong>Compensar BI</strong>
-      <small>Dashboard Integral</small>
-    </div>
+  <div class="sb-logo">
+    <div class="sb-logo-icon">C</div>
+    <div><strong>Compensar BI</strong><small>Dashboard Integral</small></div>
   </div>
-
-  <div class="sidebar-section-label">Módulos</div>
-  <div class="nav-item active" data-page="intro"><i class="fa-solid fa-house"></i> Introducción</div>
-  <div class="nav-item" data-page="home"><i class="fa-solid fa-chart-pie"></i> Panel de Control <span class="nav-badge">KPI</span></div>
-
-  <div class="sidebar-section-label">Operaciones</div>
-  <div class="nav-item" data-page="radicaciones"><i class="fa-solid fa-inbox"></i> Radicaciones</div>
-  <div class="nav-item" data-page="inmediatos"><i class="fa-solid fa-bolt"></i> Inmediatos</div>
-  <div class="nav-item" data-page="llegada"><i class="fa-solid fa-user-clock"></i> Inf. de Llegada</div>
-
-  <div class="sidebar-section-label">Calidad & Logística</div>
-  <div class="nav-item" data-page="noconformidades"><i class="fa-solid fa-triangle-exclamation"></i> No Conformidades</div>
-  <div class="nav-item" data-page="mensajeria"><i class="fa-solid fa-truck"></i> Mensajería</div>
-
-  <div class="sidebar-footer">
-    <i class="fa-solid fa-circle" style="color:var(--success);font-size:8px"></i>
-    <span id="dataStatus">Datos actualizados</span>
-  </div>
+  <div class="sb-sec">Principal</div>
+  <div class="nav active" data-page="intro"><i class="fa-solid fa-house"></i> Introducción</div>
+  <div class="nav" data-page="home"><i class="fa-solid fa-chart-pie"></i> Panel de Control <span class="nb">KPI</span></div>
+  <div class="sb-sec">Operaciones</div>
+  <div class="nav" data-page="radicaciones"><i class="fa-solid fa-inbox"></i> Radicaciones</div>
+  <div class="nav" data-page="inmediatos"><i class="fa-solid fa-bolt"></i> Inmediatos</div>
+  <div class="nav" data-page="llegada"><i class="fa-solid fa-user-clock"></i> Inf. de Llegada</div>
+  <div class="sb-sec">Calidad & Logística</div>
+  <div class="nav" data-page="noconformidades"><i class="fa-solid fa-triangle-exclamation"></i> No Conformidades</div>
+  <div class="nav" data-page="mensajeria"><i class="fa-solid fa-truck"></i> Mensajería</div>
+  <div class="sb-footer"><i class="fa-solid fa-circle" style="color:var(--green);font-size:7px"></i><span id="dsStatus">Datos actualizados</span></div>
 </nav>
 
 <!-- MAIN -->
 <div id="main">
-  <!-- TOPBAR -->
   <div id="topbar">
-    <div class="topbar-left">
-      <h1 id="pageTitle">Dashboard Integral – Compensar</h1>
-      <p id="pageSubtitle">Sistema de Business Intelligence Operativo</p>
+    <div>
+      <h1 id="pTitle">Dashboard Integral – Compensar</h1>
+      <p id="pSub">Sistema de Business Intelligence Operativo</p>
     </div>
-    <div class="topbar-right">
-      <span id="last-update">Última carga: –</span>
-      <button class="refresh-btn" onclick="loadAllData()">
-        <i class="fa-solid fa-rotate-right"></i> Actualizar
-      </button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="last-upd">Última carga: –</span>
+      <button class="refresh-btn" onclick="loadAll()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
     </div>
   </div>
 
-  <!-- PAGE CONTAINER -->
-  <div id="page-container">
+  <div id="pc">
 
-    <!-- ════════════════ INTRO ════════════════ -->
+    <!-- ══ INTRO ══ -->
     <div class="page active" id="page-intro">
-      <div class="intro-hero">
-        <div class="intro-tag"><i class="fa-solid fa-star"></i> <span>Business Intelligence</span> · Compensar 2025</div>
+      <div class="hero">
+        <div class="hero-tag"><i class="fa-solid fa-star"></i> Business Intelligence · <span style="color:var(--orange)">Compensar 2025</span></div>
         <h2>Dashboard de Gestión Operativa</h2>
-        <p>Plataforma de análisis en tiempo real para el monitoreo integral de radicaciones, mensajería, talento humano y calidad del servicio. Diseñada para visibilizar el cumplimiento de ANS y optimizar la operación.</p>
+        <p>Plataforma de análisis en tiempo real para el monitoreo integral de radicaciones, mensajería, talento humano y calidad del servicio.</p>
       </div>
 
-      <!-- FLUJO OPERATIVO -->
-      <div class="card" style="margin-bottom:24px">
-        <div class="card-title"><i class="fa-solid fa-diagram-project"></i> Flujo Operativo</div>
-        <div class="flow-grid">
-          <div class="flow-step" onclick="goTo('radicaciones')">
-            <div class="flow-circle" style="background:linear-gradient(135deg,#F37021,#d45f0f)">📥</div>
-            <h4>1. Radicaciones</h4>
-            <p>Entrada de documentos y trámites por ventanilla</p>
+      <div class="card" style="margin-bottom:20px">
+        <div class="ct"><i class="fa-solid fa-diagram-project"></i> Flujo Operativo</div>
+        <div class="flow">
+          <div class="fs" onclick="goTo('radicaciones')">
+            <div class="fc" style="background:linear-gradient(135deg,#F37021,#d45f0f)">📥</div>
+            <h4>1. Radicaciones</h4><p>Entrada de documentos por ventanilla</p>
           </div>
-          <div class="flow-step" onclick="goTo('inmediatos')">
-            <div class="flow-circle" style="background:linear-gradient(135deg,#004AAD,#003280)">⚡</div>
-            <h4>2. Inmediatos</h4>
-            <p>Entrega urgente por mensajeros fijos</p>
+          <div class="fs" onclick="goTo('inmediatos')">
+            <div class="fc" style="background:linear-gradient(135deg,#004AAD,#003280)">⚡</div>
+            <h4>2. Inmediatos</h4><p>Entrega urgente mensajeros fijos</p>
           </div>
-          <div class="flow-step" onclick="goTo('llegada')">
-            <div class="flow-circle" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🕐</div>
-            <h4>3. Llegada</h4>
-            <p>Puntualidad del personal en puntos físicos</p>
+          <div class="fs" onclick="goTo('llegada')">
+            <div class="fc" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🕐</div>
+            <h4>3. Llegada</h4><p>Puntualidad personal físico</p>
           </div>
-          <div class="flow-step" onclick="goTo('noconformidades')">
-            <div class="flow-circle" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">⚠️</div>
-            <h4>4. No Conformidades</h4>
-            <p>Gestión de calidad y cumplimiento de ANS</p>
+          <div class="fs" onclick="goTo('noconformidades')">
+            <div class="fc" style="background:linear-gradient(135deg,#ef4444,#b91c1c)">⚠️</div>
+            <h4>4. No Conform.</h4><p>Calidad y cumplimiento ANS</p>
           </div>
-          <div class="flow-step" onclick="goTo('mensajeria')">
-            <div class="flow-circle" style="background:linear-gradient(135deg,#22c55e,#15803d)">🚚</div>
-            <h4>5. Mensajería</h4>
-            <p>Logística de rutas y destinos frecuentes</p>
+          <div class="fs" onclick="goTo('mensajeria')">
+            <div class="fc" style="background:linear-gradient(135deg,#22c55e,#15803d)">🚚</div>
+            <h4>5. Mensajería</h4><p>Logística rutas y destinos</p>
           </div>
         </div>
       </div>
 
-      <!-- ANS INFO -->
-      <div class="grid-2" style="margin-bottom:24px">
+      <div class="g2" style="margin-bottom:20px">
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-gavel"></i> Lógica de ANS</div>
-          <div class="timeline">
-            <div class="tl-item">
-              <div class="tl-dot" style="color:var(--orange)"></div>
-              <h4>Respuesta Inicial</h4>
-              <p>Tiempo máximo de <strong>1 día hábil</strong> para dar respuesta a una no conformidad registrada.</p>
-            </div>
-            <div class="tl-item">
-              <div class="tl-dot" style="color:var(--blue)"></div>
-              <h4>Plan de Acción</h4>
-              <p>Tiempo máximo de <strong>3 días hábiles</strong> para presentar un plan de acción correctivo.</p>
-            </div>
-            <div class="tl-item">
-              <div class="tl-dot" style="color:var(--success)"></div>
-              <h4>Cumplimiento</h4>
-              <p>El sistema evalúa automáticamente la columna <code>CUMPLIMIENTO ANS</code> para calcular el % de éxito.</p>
-            </div>
+          <div class="ct"><i class="fa-solid fa-gavel"></i> Lógica de ANS</div>
+          <div class="tl">
+            <div class="tli"><div class="tld" style="color:var(--orange)"></div><h4>Respuesta Inicial</h4><p>Máximo <strong>1 día hábil</strong> para responder una no conformidad.</p></div>
+            <div class="tli"><div class="tld" style="color:var(--blue)"></div><h4>Plan de Acción</h4><p>Máximo <strong>3 días hábiles</strong> para presentar plan correctivo.</p></div>
+            <div class="tli"><div class="tld" style="color:var(--green)"></div><h4>Cumplimiento</h4><p>Evaluación automática via columna <code>CUMPLIMIENTO ANS</code>.</p></div>
           </div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-circle-info"></i> Sobre este Dashboard</div>
-          <p style="font-size:13px;color:var(--text-muted);line-height:1.8;margin-bottom:14px">
-            Este BI se conecta directamente a Google Sheets vía PapaParse y procesa 5 hojas de trabajo en tiempo real. Los datos se agrupan automáticamente por mes para facilitar el análisis de tendencias.
-          </p>
-          <div class="stat-pill">
-            <div class="sp-icon" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-database"></i></div>
-            <div><div class="sp-val" id="intro-total-rows">–</div><div class="sp-label">Registros totales cargados</div></div>
-          </div>
-          <div class="stat-pill">
-            <div class="sp-icon" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-table"></i></div>
-            <div><div class="sp-val">5</div><div class="sp-label">Hojas de trabajo activas</div></div>
-          </div>
+          <div class="ct"><i class="fa-solid fa-circle-info"></i> Estado del Sistema</div>
+          <div class="sp"><div class="sp-i" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-database"></i></div><div><div class="sp-v" id="intro-total">–</div><div class="sp-l">Registros totales cargados</div></div></div>
+          <div class="sp"><div class="sp-i" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-table"></i></div><div><div class="sp-v">5</div><div class="sp-l">Hojas de trabajo activas</div></div></div>
+          <div class="sp"><div class="sp-i" style="background:#dcfce7;color:var(--green)"><i class="fa-solid fa-check"></i></div><div><div class="sp-v" id="intro-sheets">0/5</div><div class="sp-l">Hojas cargadas correctamente</div></div></div>
         </div>
       </div>
 
-      <!-- MÓDULOS -->
       <div class="card">
-        <div class="card-title"><i class="fa-solid fa-grid-2"></i> Módulos del Dashboard</div>
-        <div class="modules-grid">
-          <div class="module-card" onclick="goTo('home')">
-            <div class="mod-icon" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-chart-pie"></i></div>
-            <i class="fa-solid fa-arrow-right mod-arrow"></i>
-            <h3>Panel de Control</h3>
-            <p>KPIs globales y resumen ejecutivo de todas las operaciones.</p>
-          </div>
-          <div class="module-card" onclick="goTo('radicaciones')">
-            <div class="mod-icon" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-inbox"></i></div>
-            <i class="fa-solid fa-arrow-right mod-arrow"></i>
-            <h3>Radicaciones</h3>
-            <p>Volumen por dependencia, usuario y tendencias de entrada.</p>
-          </div>
-          <div class="module-card" onclick="goTo('inmediatos')">
-            <div class="mod-icon" style="background:#fef3c7;color:var(--warning)"><i class="fa-solid fa-bolt"></i></div>
-            <i class="fa-solid fa-arrow-right mod-arrow"></i>
-            <h3>Inmediatos</h3>
-            <p>Gauge de cumplimiento de tiempos en mensajería urgente.</p>
-          </div>
-          <div class="module-card" onclick="goTo('llegada')">
-            <div class="mod-icon" style="background:#dcfce7;color:var(--success)"><i class="fa-solid fa-user-clock"></i></div>
-            <i class="fa-solid fa-arrow-right mod-arrow"></i>
-            <h3>Inf. de Llegada</h3>
-            <p>Puntualidad del personal y tasas de retraso por sede.</p>
-          </div>
-          <div class="module-card" onclick="goTo('noconformidades')">
-            <div class="mod-icon" style="background:#fee2e2;color:var(--danger)"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <i class="fa-solid fa-arrow-right mod-arrow"></i>
-            <h3>No Conformidades</h3>
-            <p>Cumplimiento de ANS, evolución mensual y semáforo de casos.</p>
-          </div>
-          <div class="module-card" onclick="goTo('mensajeria')">
-            <div class="mod-icon" style="background:#f0fdf4;color:#16a34a"><i class="fa-solid fa-truck"></i></div>
-            <i class="fa-solid fa-arrow-right mod-arrow"></i>
-            <h3>Mensajería</h3>
-            <p>Destinos frecuentes, rutas de mayor demanda y volumen mensual.</p>
-          </div>
+        <div class="ct"><i class="fa-solid fa-grid-2"></i> Módulos del Dashboard</div>
+        <div class="mg">
+          <div class="mc" onclick="goTo('home')"><div class="mi" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-chart-pie"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Panel de Control</h3><p>KPIs globales y resumen ejecutivo.</p></div>
+          <div class="mc" onclick="goTo('radicaciones')"><div class="mi" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-inbox"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Radicaciones</h3><p>Volumen por tipo, sede, canal y hora.</p></div>
+          <div class="mc" onclick="goTo('inmediatos')"><div class="mi" style="background:#fef3c7;color:var(--amber)"><i class="fa-solid fa-bolt"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Inmediatos</h3><p>Órdenes por mes, proceso y servicio.</p></div>
+          <div class="mc" onclick="goTo('llegada')"><div class="mi" style="background:#dcfce7;color:var(--green)"><i class="fa-solid fa-user-clock"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Inf. de Llegada</h3><p>Puntualidad y cumplimiento por ventanilla.</p></div>
+          <div class="mc" onclick="goTo('noconformidades')"><div class="mi" style="background:#fee2e2;color:var(--red)"><i class="fa-solid fa-triangle-exclamation"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>No Conformidades</h3><p>ANS, tiempos de respuesta y plan de acción.</p></div>
+          <div class="mc" onclick="goTo('mensajeria')"><div class="mi" style="background:#f0fdf4;color:#16a34a"><i class="fa-solid fa-truck"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Mensajería</h3><p>Destinos frecuentes y rutas de mayor demanda.</p></div>
         </div>
       </div>
     </div>
 
-    <!-- ════════════════ HOME (KPIs GLOBALES) ════════════════ -->
+    <!-- ══ HOME ══ -->
     <div class="page" id="page-home">
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-chart-pie" style="color:var(--orange)"></i> Panel de Control</h2>
-          <p>Resumen ejecutivo de indicadores clave de desempeño</p>
-        </div>
-        <div class="section-badge"><i class="fa-solid fa-bolt"></i> Tiempo Real</div>
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-chart-pie" style="color:var(--orange)"></i> Panel de Control</h2><p>Resumen ejecutivo de indicadores clave</p></div>
+        <div class="sbadge"><i class="fa-solid fa-bolt"></i> Tiempo Real</div>
       </div>
-
-      <div class="kpi-grid" id="kpi-global"></div>
-
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-chart-line"></i> Volumen Mensual (Radicaciones)</div>
-          <div class="chart-wrap"><canvas id="chartHomeMensual"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-shield-check"></i> Cumplimiento ANS – No Conformidades</div>
-          <div class="chart-wrap"><canvas id="chartHomeANS"></canvas></div>
-        </div>
+      <div class="kg" id="kpi-home"></div>
+      <div class="g2">
+        <div class="card"><div class="ct"><i class="fa-solid fa-chart-line"></i> Volumen Mensual – Radicaciones</div><div class="cw"><canvas id="ch-home-rad"></canvas></div></div>
+        <div class="card"><div class="ct"><i class="fa-solid fa-shield-check"></i> Cumplimiento ANS – No Conformidades</div><div class="cw"><canvas id="ch-home-ans"></canvas></div></div>
       </div>
-
-      <div class="grid-3">
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-users"></i> Top Dependencias</div>
-          <div id="home-top-dep" class="progress-list"></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-location-dot"></i> Top Destinos Mensajería</div>
-          <div id="home-top-dest" class="progress-list"></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-clock"></i> Puntualidad Personal</div>
-          <div style="position:relative;height:200px"><canvas id="chartHomePuntual"></canvas></div>
-          <div id="home-puntual-legend" style="margin-top:12px" class="donut-legend"></div>
-        </div>
+      <div class="g3">
+        <div class="card"><div class="ct"><i class="fa-solid fa-layer-group"></i> Top Tipos Correspondencia</div><div id="home-tipos" class="pl"></div></div>
+        <div class="card"><div class="ct"><i class="fa-solid fa-location-dot"></i> Top Destinos Mensajería</div><div id="home-dests" class="pl"></div></div>
+        <div class="card"><div class="ct"><i class="fa-solid fa-clock"></i> Puntualidad Personal</div><div style="position:relative;height:180px"><canvas id="ch-home-punt"></canvas></div><div id="home-punt-leg" class="dl" style="margin-top:12px"></div></div>
       </div>
     </div>
 
-    <!-- ════════════════ RADICACIONES ════════════════ -->
+    <!-- ══ RADICACIONES ══ -->
     <div class="page" id="page-radicaciones">
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-inbox" style="color:var(--blue)"></i> Radicaciones</h2>
-          <p>Gestión de ventanilla · Volumen de documentos y trámites ingresados</p>
-        </div>
-        <div class="section-badge" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-inbox"></i> Ventanilla</div>
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-inbox" style="color:var(--blue)"></i> Radicaciones</h2><p>Gestión de ventanilla · Documentos y trámites ingresados</p></div>
+        <div class="sbadge" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-inbox"></i> Ventanilla</div>
       </div>
 
-      <div class="kpi-grid" id="kpi-radicaciones"></div>
+      <!-- FILTERS -->
+      <div class="filters" id="rad-filters">
+        <label>Mes de Radicación
+          <select id="rad-mes" onchange="applyRadFilters()"><option value="">Todos</option></select>
+        </label>
+        <label>Sede de Radicación
+          <select id="rad-sede" onchange="applyRadFilters()"><option value="">Todas</option></select>
+        </label>
+        <label>Canal de Entrada
+          <select id="rad-canal" onchange="applyRadFilters()"><option value="">Todos</option></select>
+        </label>
+        <button class="btn-clear" onclick="clearRadFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
+      </div>
 
-      <div class="grid-2">
+      <div class="kg" id="kpi-rad"></div>
+
+      <div class="g2">
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-building"></i> Trámites por Dependencia</div>
-          <div class="chart-wrap tall"><canvas id="chartRadDepend"></canvas></div>
+          <div class="ct"><i class="fa-solid fa-layer-group"></i> Trámites por Tipo Correspondencia</div>
+          <div class="cw t"><canvas id="ch-rad-tipos"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Evolución Mensual</div>
-          <div class="chart-wrap"><canvas id="chartRadMensual"></canvas></div>
-          <div style="margin-top:16px">
-            <div class="card-title"><i class="fa-solid fa-user"></i> Top Usuarios Radicadores</div>
-            <div id="rad-top-users" class="progress-list"></div>
-          </div>
+          <div class="ct"><i class="fa-solid fa-calendar-days"></i> Evolución Mensual</div>
+          <div class="cw"><canvas id="ch-rad-mes"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-building"></i> Radicaciones por Sede</div>
+          <div class="cw"><canvas id="ch-rad-sede"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-signal"></i> Por Canal de Entrada</div>
+          <div class="cw"><canvas id="ch-rad-canal"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-calendar-week"></i> Por Día de la Semana</div>
+          <div class="cw"><canvas id="ch-rad-dia"></canvas></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="fa-solid fa-table"></i> Últimas Radicaciones</div>
-        <div class="table-wrap">
-          <table id="tableRad">
-            <thead><tr><th>#</th><th>Fecha</th><th>Dependencia</th><th>Usuario</th><th>Tipo</th><th>Estado</th></tr></thead>
-            <tbody id="tbodyRad"></tbody>
-          </table>
-        </div>
+        <div class="ct"><i class="fa-solid fa-clock"></i> Análisis de Horas de Radicación</div>
+        <div class="cw"><canvas id="ch-rad-hora"></canvas></div>
       </div>
     </div>
 
-    <!-- ════════════════ INMEDIATOS ════════════════ -->
+    <!-- ══ INMEDIATOS ══ -->
     <div class="page" id="page-inmediatos">
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-bolt" style="color:var(--warning)"></i> Inmediatos</h2>
-          <p>Mensajería fija · Control de tiempos de entrega urgente</p>
-        </div>
-        <div class="section-badge" style="background:#fef3c7;color:#92400e"><i class="fa-solid fa-stopwatch"></i> Urgente</div>
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-bolt" style="color:var(--amber)"></i> Inmediatos</h2><p>Mensajería fija · Control de órdenes y tiempos de entrega</p></div>
+        <div class="sbadge" style="background:#fef3c7;color:#92400e"><i class="fa-solid fa-stopwatch"></i> Urgente</div>
       </div>
 
-      <div class="kpi-grid" id="kpi-inmediatos"></div>
+      <div class="filters">
+        <label>Mes (Mes FAC)
+          <select id="inm-mes" onchange="applyInmFilters()"><option value="">Todos</option></select>
+        </label>
+        <button class="btn-clear" onclick="clearInmFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
+      </div>
 
-      <div class="grid-2">
-        <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px">
-          <div class="card-title" style="width:100%;text-align:center"><i class="fa-solid fa-gauge-high"></i> % Entregas a Tiempo</div>
-          <div class="chart-wrap" style="height:260px;width:100%"><canvas id="chartGauge"></canvas></div>
-          <div class="gauge-value" id="gaugeValue">–%</div>
-          <div class="gauge-label" id="gaugeLabel">Entregas a tiempo / Total</div>
+      <div class="kg" id="kpi-inm"></div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-chart-bar"></i> Órdenes Distintas por Mes (N° ORDEN)</div>
+          <div class="cw"><canvas id="ch-inm-ordenes"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Tendencia Mensual de Cumplimiento</div>
-          <div class="chart-wrap"><canvas id="chartInmMensual"></canvas></div>
-          <div style="margin-top:16px">
-            <div class="card-title"><i class="fa-solid fa-person-running"></i> Mensajeros con Mayor Volumen</div>
-            <div id="inm-top-mensajeros" class="progress-list"></div>
-          </div>
+          <div class="ct"><i class="fa-solid fa-gauge-high"></i> Estado de Órdenes</div>
+          <div style="position:relative;height:200px"><canvas id="ch-inm-estado"></canvas></div>
+          <div id="inm-estado-leg" class="dl" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-sitemap"></i> Ranking por PROCESO</div>
+          <div id="inm-proceso" class="pl"></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-tags"></i> Ranking por SERVICIO</div>
+          <div id="inm-servicio" class="pl"></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="fa-solid fa-table"></i> Detalle de Entregas Recientes</div>
-        <div class="table-wrap">
-          <table id="tableInm">
-            <thead><tr><th>#</th><th>Fecha</th><th>Mensajero</th><th>Destino</th><th>Hora Entrega</th><th>Estado</th></tr></thead>
-            <tbody id="tbodyInm"></tbody>
+        <div class="ct"><i class="fa-solid fa-table"></i> Detalle de Órdenes</div>
+        <div class="tw">
+          <table id="t-inm">
+            <thead><tr><th>#</th><th>Mes FAC</th><th>N° Orden</th><th>Proceso</th><th>Servicio</th><th>Estado</th></tr></thead>
+            <tbody id="tb-inm"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ════════════════ LLEGADA ════════════════ -->
+    <!-- ══ LLEGADA ══ -->
     <div class="page" id="page-llegada">
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-user-clock" style="color:var(--success)"></i> Informe de Llegada</h2>
-          <p>Talento Humano · Puntualidad del personal en puntos físicos</p>
-        </div>
-        <div class="section-badge" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-check-circle"></i> RRHH</div>
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-user-clock" style="color:var(--green)"></i> Informe de Llegada</h2><p>Talento Humano · Puntualidad en puntos físicos</p></div>
+        <div class="sbadge" style="background:#dcfce7;color:#15803d"><i class="fa-solid fa-check-circle"></i> RRHH</div>
       </div>
 
-      <div class="kpi-grid" id="kpi-llegada"></div>
+      <div class="filters">
+        <label>Nombre del Empleado
+          <select id="ll-nombre" onchange="applyLlFilters()"><option value="">Todos</option></select>
+        </label>
+        <label>Fecha Desde
+          <input type="date" id="ll-desde" onchange="applyLlFilters()"/>
+        </label>
+        <label>Fecha Hasta
+          <input type="date" id="ll-hasta" onchange="applyLlFilters()"/>
+        </label>
+        <button class="btn-clear" onclick="clearLlFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
+      </div>
 
-      <div class="grid-1-2">
+      <div class="kg" id="kpi-ll"></div>
+
+      <div class="g12">
         <div class="card" style="display:flex;flex-direction:column">
-          <div class="card-title"><i class="fa-solid fa-chart-pie"></i> Puntualidad vs Tardanzas</div>
-          <div style="position:relative;height:220px"><canvas id="chartLlegadaDonut"></canvas></div>
-          <div id="llegada-donut-legend" class="donut-legend" style="margin-top:16px"></div>
+          <div class="ct"><i class="fa-solid fa-chart-pie"></i> Puntualidad vs Tardanzas</div>
+          <div style="position:relative;height:200px"><canvas id="ch-ll-donut"></canvas></div>
+          <div id="ll-donut-leg" class="dl" style="margin-top:14px"></div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-map-marker-alt"></i> Cumplimiento por Sede</div>
-          <div class="chart-wrap"><canvas id="chartLlegadaSede"></canvas></div>
+          <div class="ct"><i class="fa-solid fa-building"></i> Cumplimiento por Ventanilla</div>
+          <div class="cw"><canvas id="ch-ll-ventanilla"></canvas></div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <div class="ct"><i class="fa-solid fa-calendar-days"></i> Evolución Mensual de Puntualidad</div>
+        <div class="cw"><canvas id="ch-ll-mes"></canvas></div>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Evolución Mensual de Puntualidad</div>
-        <div class="chart-wrap"><canvas id="chartLlegadaMensual"></canvas></div>
-      </div>
-
-      <div class="card" style="margin-top:20px">
-        <div class="card-title"><i class="fa-solid fa-table"></i> Detalle de Novedades</div>
-        <div class="table-wrap">
-          <table id="tableLlegada">
-            <thead><tr><th>#</th><th>Fecha</th><th>Empleado</th><th>Sede</th><th>Hora Llegada</th><th>Estado</th></tr></thead>
-            <tbody id="tbodyLlegada"></tbody>
-          </table>
-        </div>
+        <div class="ct"><i class="fa-solid fa-comment-dots"></i> Observaciones y Novedades</div>
+        <div id="obs-list" class="obs-list"></div>
       </div>
     </div>
 
-    <!-- ════════════════ NO CONFORMIDADES ════════════════ -->
+    <!-- ══ NO CONFORMIDADES ══ -->
     <div class="page" id="page-noconformidades">
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i> No Conformidades</h2>
-          <p>Calidad del servicio · Cumplimiento de ANS 1 día (respuesta) / 3 días (plan de acción)</p>
-        </div>
-        <div class="section-badge" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-shield"></i> Calidad</div>
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--red)"></i> No Conformidades</h2><p>Calidad · ANS 1 día respuesta / 3 días plan de acción</p></div>
+        <div class="sbadge" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-shield"></i> Calidad</div>
       </div>
 
-      <div class="kpi-grid" id="kpi-nc"></div>
-
-      <!-- ANS METERS -->
-      <div class="grid-2" style="margin-bottom:20px">
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-gauge-high"></i> Indicador de Cumplimiento ANS</div>
-          <div class="ans-bar-wrap">
-            <div class="ans-header"><span>Cumple</span><span id="ans-cumple-pct">–%</span></div>
-            <div class="ans-track"><div class="ans-fill" id="ans-fill-cumple"><span></span></div></div>
-          </div>
-          <div class="ans-bar-wrap">
-            <div class="ans-header"><span>No Cumple</span><span id="ans-nocumple-pct">–%</span></div>
-            <div class="ans-track" style="background:#dcfce7">
-              <div class="ans-fill" style="background:linear-gradient(90deg,#ef4444,#b91c1c)" id="ans-fill-nocumple"><span></span></div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-chart-line"></i> Evolución Mensual del Cumplimiento</div>
-          <div class="chart-wrap"><canvas id="chartNCLinea"></canvas></div>
-        </div>
+      <div class="filters">
+        <label>Mes (Fecha Recepción)
+          <select id="nc-mes" onchange="applyNcFilters()"><option value="">Todos</option></select>
+        </label>
+        <button class="btn-clear" onclick="clearNcFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
       </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-tags"></i> No Conformidades por Tipo</div>
-          <div class="chart-wrap short"><canvas id="chartNCTipo"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-building"></i> No Conformidades por Área</div>
-          <div class="chart-wrap short"><canvas id="chartNCArea"></canvas></div>
-        </div>
-      </div>
+      <div class="kg" id="kpi-nc"></div>
 
-      <div class="card" style="margin-top:0">
-        <div class="card-title"><i class="fa-solid fa-list-check"></i> Últimos 10 Casos – Semáforo ANS</div>
-        <div class="table-wrap">
-          <table id="tableNC">
-            <thead><tr><th>#</th><th>Fecha</th><th>Caso</th><th>Área</th><th>Tipo</th><th>Responsable</th><th>ANS</th></tr></thead>
-            <tbody id="tbodyNC"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ════════════════ MENSAJERÍA ════════════════ -->
-    <div class="page" id="page-mensajeria">
-      <div class="section-header">
-        <div>
-          <h2><i class="fa-solid fa-truck" style="color:var(--success)"></i> Mensajería</h2>
-          <p>Logística general · Destinos frecuentes y análisis de rutas</p>
-        </div>
-        <div class="section-badge" style="background:#f0fdf4;color:#15803d"><i class="fa-solid fa-route"></i> Logística</div>
-      </div>
-
-      <div class="kpi-grid" id="kpi-mensajeria"></div>
-
-      <div class="grid-2">
+      <div class="g2" style="margin-bottom:18px">
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-location-dot"></i> Destinos Frecuentes (Top 10)</div>
-          <div class="chart-wrap tall"><canvas id="chartMensajeriaDestinos"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Volumen Mensual de Envíos</div>
-          <div class="chart-wrap"><canvas id="chartMensajeriaMensual"></canvas></div>
+          <div class="ct"><i class="fa-solid fa-gauge-high"></i> Indicador de Cumplimiento ANS</div>
+          <div class="ans-b"><div class="ans-h"><span>Cumple ANS</span><span id="nc-cumple-pct">–%</span></div><div class="ans-tr"><div class="ans-f" id="nc-fill-c"><span></span></div></div></div>
+          <div class="ans-b"><div class="ans-h"><span>No Cumple ANS</span><span id="nc-nocumple-pct">–%</span></div><div class="ans-tr" style="background:#dcfce7"><div class="ans-f" style="background:linear-gradient(90deg,var(--red),#b91c1c)" id="nc-fill-nc"><span></span></div></div></div>
           <div style="margin-top:16px">
-            <div class="card-title"><i class="fa-solid fa-grid-2"></i> Mapa de Destinos</div>
-            <div id="treemapContainer"></div>
+            <div class="ct"><i class="fa-solid fa-stopwatch"></i> Tiempos Promedio</div>
+            <div class="sp"><div class="sp-i" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-reply"></i></div><div><div class="sp-v" id="nc-avg-resp">–</div><div class="sp-l">Días prom. T. Respuesta</div></div></div>
+            <div class="sp"><div class="sp-i" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-file-pen"></i></div><div><div class="sp-v" id="nc-avg-plan">–</div><div class="sp-l">Días prom. T. Plan de Acción</div></div></div>
           </div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-chart-line"></i> Evolución Mensual del Cumplimiento</div>
+          <div class="cw"><canvas id="ch-nc-linea"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-tags"></i> Por Tipo</div>
+          <div class="cw s"><canvas id="ch-nc-tipo"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-building"></i> Por Área</div>
+          <div class="cw s"><canvas id="ch-nc-area"></canvas></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><i class="fa-solid fa-table"></i> Últimos Envíos Registrados</div>
-        <div class="table-wrap">
-          <table id="tableMensajeria">
-            <thead><tr><th>#</th><th>Fecha</th><th>Remitente</th><th>Destino</th><th>Mensajero</th><th>Estado</th></tr></thead>
-            <tbody id="tbodyMensajeria"></tbody>
+        <div class="ct"><i class="fa-solid fa-list-check"></i> Últimos 10 Casos – Semáforo ANS</div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>#</th><th>Fecha Recepción</th><th>Caso</th><th>Área</th><th>Tipo</th><th>Responsable</th><th>T.Respuesta</th><th>T.Plan Acción</th><th>ANS</th></tr></thead>
+            <tbody id="tb-nc"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-  </div><!-- /page-container -->
+    <!-- ══ MENSAJERÍA ══ -->
+    <div class="page" id="page-mensajeria">
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-truck" style="color:var(--green)"></i> Mensajería</h2><p>Logística general · Destinos frecuentes y análisis de rutas</p></div>
+        <div class="sbadge" style="background:#f0fdf4;color:#15803d"><i class="fa-solid fa-route"></i> Logística</div>
+      </div>
+
+      <div class="kg" id="kpi-msg"></div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-location-dot"></i> Top 10 Destinos Frecuentes</div>
+          <div class="cw t"><canvas id="ch-msg-dest"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-calendar-days"></i> Volumen Mensual de Envíos</div>
+          <div class="cw"><canvas id="ch-msg-mes"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-person-biking"></i> Por Mensajero</div>
+          <div id="msg-mensajero" class="pl"></div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-circle-check"></i> Por Estado de Entrega</div>
+          <div style="position:relative;height:200px"><canvas id="ch-msg-estado"></canvas></div>
+          <div id="msg-estado-leg" class="dl" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct"><i class="fa-solid fa-table"></i> Últimos Envíos Registrados</div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>#</th><th>Fecha</th><th>Remitente</th><th>Destino</th><th>Mensajero</th><th>Estado</th></tr></thead>
+            <tbody id="tb-msg"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pc -->
 </div><!-- /main -->
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// CHART.JS DEFAULTS
-// ═══════════════════════════════════════════════════════════════════
-Chart.defaults.font.family = "'Poppins', sans-serif";
-Chart.defaults.font.size = 11;
-Chart.defaults.color = '#64748b';
-Chart.defaults.plugins.legend.display = false;
+// ═══════════════════════════════════
+// CONSTANTS & STATE
+// ═══════════════════════════════════
+Chart.defaults.font.family="'Poppins',sans-serif";
+Chart.defaults.font.size=11;
+Chart.defaults.color='#64748b';
+Chart.defaults.plugins.legend.display=false;
 
-const C_ORANGE = '#F37021';
-const C_BLUE   = '#004AAD';
-const C_GREEN  = '#22c55e';
-const C_RED    = '#ef4444';
-const C_AMBER  = '#f59e0b';
-const PALETTE  = ['#F37021','#004AAD','#22c55e','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#14b8a6','#f97316','#6366f1'];
+const COR='#F37021',CBL='#004AAD',CGR='#22c55e',CRD='#ef4444',CAM='#f59e0b';
+const PAL=['#F37021','#004AAD','#22c55e','#f59e0b','#8b5cf6','#06b6d4','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#0ea5e9'];
 
-// ═══════════════════════════════════════════════════════════════════
-// DATA STORE
-// ═══════════════════════════════════════════════════════════════════
-const DATA = { radicaciones:[], inmediatos:[], llegada:[], noConformidades:[], mensajeria:[] };
-const CHARTS = {};
+const BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub?output=csv';
 
-const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub?output=csv';
-
-// Sheet GIDs – adjust if needed
-const SHEETS = [
-  { key: 'radicaciones',    gid: '0',          label: 'Radicaciones' },
-  { key: 'inmediatos',      gid: '1883232562',  label: 'Inmediatos' },
-  { key: 'llegada',         gid: '1704987644',  label: 'Llegada' },
-  { key: 'noConformidades', gid: '1543256289',  label: 'No Conformidades' },
-  { key: 'mensajeria',      gid: '822426700',   label: 'Mensajería' },
+// Sheet GIDs — first sheet is gid=0, rest discovered by name via published URL
+// User should verify GIDs if sheets don't load (check URL when publishing individual sheets)
+const SHEETS=[
+  {key:'rad',   gid:'0',          label:'Radicaciones'},
+  {key:'inm',   gid:'1883232562', label:'Inmediatos'},
+  {key:'ll',    gid:'1704987644', label:'Llegada'},
+  {key:'nc',    gid:'1543256289', label:'No Conformidades'},
+  {key:'msg',   gid:'822426700',  label:'Mensajería'},
 ];
 
-// ═══════════════════════════════════════════════════════════════════
+const RAW={rad:[],inm:[],ll:[],nc:[],msg:[]};
+const FILT={rad:[],inm:[],ll:[],nc:[],msg:[]};
+const CH={};
+
+// ═══════════════════════════════════
 // NAVIGATION
-// ═══════════════════════════════════════════════════════════════════
-const PAGE_TITLES = {
-  intro:           ['Bienvenido – Compensar BI', 'Guía del sistema de Business Intelligence'],
-  home:            ['Panel de Control', 'KPIs Globales y Resumen Ejecutivo'],
-  radicaciones:    ['Radicaciones', 'Gestión de Ventanilla · Documentos y Trámites'],
-  inmediatos:      ['Inmediatos', 'Mensajería Fija · Tiempos de Entrega Urgente'],
-  llegada:         ['Informe de Llegada', 'Talento Humano · Puntualidad del Personal'],
-  noconformidades: ['No Conformidades', 'Calidad del Servicio · Cumplimiento ANS'],
-  mensajeria:      ['Mensajería', 'Logística General · Destinos y Rutas'],
+// ═══════════════════════════════════
+const TITLES={
+  intro:['Bienvenido – Compensar BI','Guía del sistema de Business Intelligence'],
+  home:['Panel de Control','KPIs Globales y Resumen Ejecutivo'],
+  radicaciones:['Radicaciones','Gestión de Ventanilla · Documentos y Trámites'],
+  inmediatos:['Inmediatos','Mensajería Fija · Órdenes y Tiempos de Entrega'],
+  llegada:['Informe de Llegada','Talento Humano · Puntualidad del Personal'],
+  noconformidades:['No Conformidades','Calidad del Servicio · Cumplimiento ANS'],
+  mensajeria:['Mensajería','Logística General · Destinos y Rutas'],
 };
-
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => goTo(item.dataset.page));
-});
-
-function goTo(page) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
-  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
-  const t = PAGE_TITLES[page] || ['Dashboard', ''];
-  document.getElementById('pageTitle').textContent = t[0];
-  document.getElementById('pageSubtitle').textContent = t[1];
-  window.scrollTo(0, 0);
+document.querySelectorAll('.nav').forEach(n=>n.addEventListener('click',()=>goTo(n.dataset.page)));
+function goTo(p){
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===p));
+  document.querySelectorAll('.page').forEach(pg=>pg.classList.toggle('active',pg.id==='page-'+p));
+  const t=TITLES[p]||['–','–'];
+  document.getElementById('pTitle').textContent=t[0];
+  document.getElementById('pSub').textContent=t[1];
+  window.scrollTo(0,0);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════════════════════════
-function fmt(n) { return (n||0).toLocaleString('es-CO'); }
-function pct(n, d) { return d ? ((n/d)*100).toFixed(1)+'%' : '0%'; }
-function pctN(n, d) { return d ? Math.round((n/d)*100) : 0; }
+// ═══════════════════════════════════
+// UTILS
+// ═══════════════════════════════════
+const fmt=n=>(n||0).toLocaleString('es-CO');
+const pctN=(n,d)=>d?Math.round(n/d*100):0;
+const pctS=(n,d)=>pctN(n,d)+'%';
+const avg=arr=>arr.length?+(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):0;
 
-function parseDate(str) {
-  if (!str) return null;
-  // Try DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY
-  const formats = [
-    /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/,
-    /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/,
-  ];
-  for (const f of formats) {
-    const m = str.trim().match(f);
-    if (m) {
-      const [, a, b, c] = m;
-      const d = a.length === 4 ? new Date(+a, +b-1, +c) : new Date(+c, +b-1, +a);
-      if (!isNaN(d)) return d;
-    }
+function parseDate(s){
+  if(!s||s.trim()==='')return null;
+  const t=s.trim();
+  let m;
+  // DD/MM/YYYY or DD-MM-YYYY
+  if((m=t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/))){
+    const d=new Date(+m[3],+m[2]-1,+m[1]);
+    return isNaN(d)?null:d;
   }
-  const d = new Date(str);
-  return isNaN(d) ? null : d;
-}
-
-function getMonthKey(str) {
-  const d = parseDate(str);
-  if (!d) return 'Sin fecha';
-  return d.toLocaleDateString('es-CO', { month:'short', year:'numeric' });
-}
-
-function groupBy(arr, keyFn) {
-  return arr.reduce((acc, row) => {
-    const k = keyFn(row);
-    acc[k] = (acc[k] || 0) + 1;
-    return acc;
-  }, {});
-}
-
-function topN(obj, n=10) {
-  return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
-}
-
-function findCol(row, candidates) {
-  const keys = Object.keys(row);
-  for (const c of candidates) {
-    const found = keys.find(k => k.toLowerCase().includes(c.toLowerCase()));
-    if (found) return row[found];
+  // YYYY-MM-DD
+  if((m=t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/))){
+    const d=new Date(+m[1],+m[2]-1,+m[3]);
+    return isNaN(d)?null:d;
   }
-  return '';
+  const d=new Date(t);
+  return isNaN(d)?null:d;
 }
 
-function mkChart(id, config) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (CHARTS[id]) CHARTS[id].destroy();
-  CHARTS[id] = new Chart(el.getContext('2d'), config);
+const MESES_ES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const DIAS_ES=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function mesKey(d){if(!d)return 'Sin fecha';return MESES_ES[d.getMonth()]+' '+d.getFullYear();}
+function mesKeyDate(s){const d=parseDate(s);return mesKey(d);}
+function mesSort(a,b){
+  const parse=s=>{const m=s.match(/(\w+)\s(\d+)/);if(!m)return 0;return +m[2]*100+MESES_ES.indexOf(m[1]);};
+  return parse(a)-parse(b);
 }
 
-function renderProgressList(elId, entries, color='orange') {
-  const el = document.getElementById(elId);
-  if (!el || !entries.length) return;
-  const max = entries[0][1];
-  el.innerHTML = entries.map(([label, val]) => `
-    <div class="progress-item">
-      <label><span>${label||'N/A'}</span><span>${fmt(val)}</span></label>
-      <div class="progress-track"><div class="progress-fill ${color}" style="width:${pctN(val,max)}%"></div></div>
+function findKey(row,candidates){
+  const keys=Object.keys(row);
+  for(const c of candidates){
+    const f=keys.find(k=>k.trim().toLowerCase()===c.toLowerCase());
+    if(f!==undefined)return f;
+  }
+  // partial match
+  for(const c of candidates){
+    const f=keys.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));
+    if(f!==undefined)return f;
+  }
+  return null;
+}
+function fv(row,candidates){const k=findKey(row,candidates);return k!==null?(row[k]||''):'';}
+
+function groupBy(arr,fn){
+  return arr.reduce((a,r)=>{const k=fn(r)||'Sin dato';a[k]=(a[k]||0)+1;return a;},{});
+}
+function topN(obj,n=10){return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);}
+function sortedMeses(obj){return Object.keys(obj).sort(mesSort);}
+
+function mkCh(id,cfg){
+  const el=document.getElementById(id);
+  if(!el)return;
+  if(CH[id])CH[id].destroy();
+  CH[id]=new Chart(el.getContext('2d'),cfg);
+}
+
+function renderPL(elId,entries,cls=''){
+  const el=document.getElementById(elId);
+  if(!el||!entries.length){if(el)el.innerHTML=emptyState();return;}
+  const max=entries[0][1]||1;
+  el.innerHTML=entries.map(([l,v])=>`<div class="pi"><label><span>${l||'N/A'}</span><span>${fmt(v)}</span></label><div class="pt"><div class="pf ${cls}" style="width:${pctN(v,max)}%"></div></div></div>`).join('');
+}
+
+function renderKPIs(id,kpis){
+  document.getElementById(id).innerHTML=kpis.map(k=>`
+    <div class="kc ${k.c}">
+      <div class="ki"><i class="${k.i}"></i></div>
+      <div class="kv">${k.v}</div>
+      <div class="kl">${k.l}</div>
+      ${k.s?`<div class="ks" style="color:${k.sc||'var(--muted)'}">${k.s}</div>`:''}
     </div>`).join('');
 }
 
-function setLoading(pct, msg) {
-  document.getElementById('loadingBar').style.width = pct + '%';
-  document.getElementById('loadingStatus').textContent = msg;
+function emptyState(msg='Sin datos disponibles'){return `<div style="text-align:center;padding:24px;color:var(--muted)"><i class="fa-solid fa-database" style="font-size:28px;opacity:.3;margin-bottom:8px;display:block"></i><span style="font-size:12px">${msg}</span></div>`;}
+
+function badgeEstado(v){
+  const s=(v||'').toLowerCase();
+  if(s.includes('cerrado')||s.includes('entregado')||s.includes('cumple')||s.includes('puntual')||s.includes('ok')||s.includes('tiempo'))
+    return `<span class="badge gr"><i class="fa-solid fa-check"></i> ${v||'OK'}</span>`;
+  if(s.includes('pendiente')||s.includes('proceso')||s.includes('abierto')||s.includes('en curso'))
+    return `<span class="badge am"><i class="fa-solid fa-clock"></i> ${v||'Pendiente'}</span>`;
+  if(s.includes('no cumple')||s.includes('tarde')||s.includes('incumple')||s.includes('vencido'))
+    return `<span class="badge rd"><i class="fa-solid fa-times"></i> ${v||'No cumple'}</span>`;
+  return `<span class="badge bl">${v||'–'}</span>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
+function setLoad(p,msg){
+  document.getElementById('loBar').style.width=p+'%';
+  document.getElementById('lo-status').textContent=msg;
+}
+
+function populateSelect(selId,values,sort=true){
+  const sel=document.getElementById(selId);
+  if(!sel)return;
+  const cur=sel.value;
+  const arr=sort?[...values].sort():values;
+  sel.innerHTML='<option value="">Todos</option>'+arr.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(arr.includes(cur))sel.value=cur;
+}
+
+// ═══════════════════════════════════
 // DATA LOADING
-// ═══════════════════════════════════════════════════════════════════
-async function loadSheet(gid) {
-  return new Promise((resolve) => {
-    const url = gid === '0'
-      ? BASE_URL
-      : BASE_URL.replace('output=csv', `gid=${gid}&single=true&output=csv`);
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      skipEmptyLines: true,
-      complete: r => resolve(r.data),
-      error: () => resolve([]),
-    });
+// ═══════════════════════════════════
+async function loadSheet(gid){
+  return new Promise(res=>{
+    const url=gid==='0'?BASE:`${BASE.replace('output=csv','')}&gid=${gid}&single=true&output=csv`.replace('pub?','pub?');
+    // Build correct URL
+    const baseClean='https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub';
+    const finalUrl=gid==='0'?baseClean+'?output=csv':baseClean+`?gid=${gid}&single=true&output=csv`;
+    Papa.parse(finalUrl,{download:true,header:true,skipEmptyLines:true,
+      complete:r=>res(r.data),error:()=>res([])});
   });
 }
 
-async function loadAllData() {
-  setLoading(5, 'Conectando con Google Sheets…');
-  document.getElementById('loading-overlay').style.opacity = '1';
-  document.getElementById('loading-overlay').style.display = 'flex';
-
-  for (let i = 0; i < SHEETS.length; i++) {
-    const s = SHEETS[i];
-    setLoading(10 + i * 18, `Cargando hoja: ${s.label}…`);
-    DATA[s.key] = await loadSheet(s.gid);
+let sheetsLoaded=0;
+async function loadAll(){
+  sheetsLoaded=0;
+  setLoad(5,'Conectando con Google Sheets…');
+  document.getElementById('lo').style.opacity='1';
+  document.getElementById('lo').style.display='flex';
+  for(let i=0;i<SHEETS.length;i++){
+    const s=SHEETS[i];
+    setLoad(8+i*18,`Cargando hoja: ${s.label}…`);
+    const data=await loadSheet(s.gid);
+    RAW[s.key]=data;
+    FILT[s.key]=[...data];
+    if(data.length>0)sheetsLoaded++;
   }
-
-  setLoading(100, '¡Datos cargados! Procesando visualizaciones…');
-  setTimeout(() => {
-    document.getElementById('loading-overlay').style.opacity = '0';
-    setTimeout(() => { document.getElementById('loading-overlay').style.display = 'none'; }, 600);
-  }, 600);
-
-  const now = new Date().toLocaleString('es-CO');
-  document.getElementById('last-update').textContent = 'Actualizado: ' + now;
-
-  const total = Object.values(DATA).reduce((s,a)=>s+a.length,0);
-  document.getElementById('intro-total-rows').textContent = fmt(total);
-
+  setLoad(100,'¡Listo! Renderizando visualizaciones…');
+  setTimeout(()=>{
+    document.getElementById('lo').style.opacity='0';
+    setTimeout(()=>document.getElementById('lo').style.display='none',600);
+  },500);
+  document.getElementById('last-upd').textContent='Actualizado: '+new Date().toLocaleString('es-CO');
+  const total=Object.values(RAW).reduce((s,a)=>s+a.length,0);
+  document.getElementById('intro-total').textContent=fmt(total);
+  document.getElementById('intro-sheets').textContent=sheetsLoaded+'/5';
   buildHome();
-  buildRadicaciones();
-  buildInmediatos();
-  buildLlegada();
-  buildNoConformidades();
-  buildMensajeria();
+  buildRad();
+  buildInm();
+  buildLl();
+  buildNc();
+  buildMsg();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// KPI HELPER
-// ═══════════════════════════════════════════════════════════════════
-function renderKPIs(elId, kpis) {
-  document.getElementById(elId).innerHTML = kpis.map(k => `
-    <div class="kpi-card ${k.color}">
-      <div class="kpi-icon"><i class="${k.icon}"></i></div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-label">${k.label}</div>
-      ${k.sub ? `<div class="kpi-sub" style="color:${k.subColor||'var(--text-muted)'}">${k.sub}</div>` : ''}
-    </div>`).join('');
-}
-
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // HOME
-// ═══════════════════════════════════════════════════════════════════
-function buildHome() {
-  const rad = DATA.radicaciones;
-  const nc  = DATA.noConformidades;
-  const msg = DATA.mensajeria;
-  const ll  = DATA.llegada;
-  const inm = DATA.inmediatos;
+// ═══════════════════════════════════
+function buildHome(){
+  const rad=RAW.rad,nc=RAW.nc,msg=RAW.msg,ll=RAW.ll;
+  // ANS
+  const cumple=nc.filter(r=>{const v=fv(r,['CUMPLIMIENTO ANS','CUMPLIMIENTO','ANS']).toLowerCase();return v.includes('cumple')&&!v.includes('no');}).length;
+  const puntual=ll.filter(r=>{const v=fv(r,['CUMPLIMIENTO','ESTADO','NOVEDAD','PUNTUAL']).toLowerCase();return v.includes('puntual')||v.includes('a tiempo')||v.includes('ok');}).length;
 
-  // Cumplimiento ANS
-  const cumple = nc.filter(r => {
-    const v = (findCol(r,['CUMPLIMIENTO','ANS','cumplimiento'])||'').toLowerCase();
-    return v.includes('cumple') && !v.includes('no');
-  }).length;
-  const ansP = pctN(cumple, nc.length);
-
-  // Puntualidad
-  const puntual = ll.filter(r => {
-    const v = (findCol(r,['ESTADO','PUNTUAL','estado'])||'').toLowerCase();
-    return v.includes('puntual') || v.includes('a tiempo') || v.includes('ok');
-  }).length;
-
-  renderKPIs('kpi-global', [
-    { color:'orange', icon:'fa-solid fa-file-lines', value: fmt(rad.length), label:'Total Radicaciones', sub: 'Documentos ingresados' },
-    { color:'blue',   icon:'fa-solid fa-bolt',       value: fmt(inm.length), label:'Entregas Inmediatas', sub: 'Mensajería urgente' },
-    { color:'green',  icon:'fa-solid fa-shield-check',value: ansP+'%',       label:'Cumplimiento ANS', sub: `${fmt(cumple)} de ${fmt(nc.length)} casos`, subColor: ansP>=80?'var(--success)':'var(--danger)' },
-    { color:'amber',  icon:'fa-solid fa-truck',       value: fmt(msg.length),label:'Envíos Mensajería', sub: 'Total de envíos' },
+  renderKPIs('kpi-home',[
+    {c:'or',i:'fa-solid fa-file-lines',v:fmt(rad.length),l:'Total Radicaciones'},
+    {c:'bl',i:'fa-solid fa-bolt',v:fmt(RAW.inm.length),l:'Órdenes Inmediatos'},
+    {c:'gr',i:'fa-solid fa-shield-check',v:pctS(cumple,nc.length),l:'Cumplimiento ANS',s:`${fmt(cumple)} de ${fmt(nc.length)} casos`,sc:pctN(cumple,nc.length)>=80?'var(--green)':'var(--red)'},
+    {c:'am',i:'fa-solid fa-truck',v:fmt(msg.length),l:'Envíos Mensajería'},
   ]);
 
-  // Gráfica mensual radicaciones
-  const meses = groupBy(rad, r => getMonthKey(findCol(r,['FECHA','fecha','Date','date'])));
-  const mLabels = Object.keys(meses).slice(-8);
-  const mVals   = mLabels.map(k => meses[k]);
-  mkChart('chartHomeMensual', {
-    type: 'bar',
-    data: {
-      labels: mLabels,
-      datasets: [{ data: mVals, backgroundColor: C_ORANGE + 'cc', borderRadius: 6, borderSkipped: false }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{grid:{display:false}}, y:{grid:{color:'#f1f5f9'}} } }
-  });
+  // Rad mensual
+  const radMes=groupBy(rad,r=>mesKeyDate(fv(r,['FECHA RADICACION','FECHA','fecha','Date'])));
+  const ml=sortedMeses(radMes).slice(-10);
+  mkCh('ch-home-rad',{type:'bar',data:{labels:ml,datasets:[{data:ml.map(k=>radMes[k]),backgroundColor:COR+'cc',borderRadius:5,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}});
 
-  // Gráfica ANS mensual
-  const ncMeses = {};
-  nc.forEach(r => {
-    const mes = getMonthKey(findCol(r,['FECHA','fecha']));
-    if (!ncMeses[mes]) ncMeses[mes] = { total:0, cumple:0 };
-    ncMeses[mes].total++;
-    const v = (findCol(r,['CUMPLIMIENTO','ANS'])||'').toLowerCase();
-    if (v.includes('cumple') && !v.includes('no')) ncMeses[mes].cumple++;
+  // NC ANS mensual
+  const ncMes={};
+  nc.forEach(r=>{
+    const mes=mesKeyDate(fv(r,['FECHA RECEPCIÓN','FECHA RECEPCION','FECHA','fecha']));
+    if(!ncMes[mes])ncMes[mes]={t:0,c:0};
+    ncMes[mes].t++;
+    const v=fv(r,['CUMPLIMIENTO ANS','CUMPLIMIENTO']).toLowerCase();
+    if(v.includes('cumple')&&!v.includes('no'))ncMes[mes].c++;
   });
-  const ansLabels = Object.keys(ncMeses).slice(-8);
-  const ansPcts = ansLabels.map(k => pctN(ncMeses[k].cumple, ncMeses[k].total));
-  mkChart('chartHomeANS', {
-    type: 'line',
-    data: {
-      labels: ansLabels,
-      datasets: [{
-        data: ansPcts,
-        borderColor: C_GREEN, backgroundColor: C_GREEN + '22',
-        fill: true, tension: .4, pointBackgroundColor: C_GREEN, pointRadius: 4
-      }]
-    },
-    options: { responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ min:0, max:100, ticks:{ callback: v=>v+'%' }, grid:{color:'#f1f5f9'} }, x:{grid:{display:false}} } }
-  });
+  const nl=sortedMeses(ncMes).slice(-10);
+  mkCh('ch-home-ans',{type:'line',data:{labels:nl,datasets:[{data:nl.map(k=>pctN(ncMes[k].c,ncMes[k].t)),
+    borderColor:CGR,backgroundColor:CGR+'22',fill:true,tension:.4,pointBackgroundColor:CGR,pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
 
-  // Top dependencias
-  const deps = topN(groupBy(rad, r => findCol(r,['DEPENDENCIA','dependencia','AREA','DESTINO_INT'])||'Sin dato'), 5);
-  renderProgressList('home-top-dep', deps, 'orange');
+  // Top tipos rad
+  const tipos=topN(groupBy(rad,r=>fv(r,['TIPO CORRESPONDENCIA','Tipo Correspondencia','TIPO'])),5);
+  renderPL('home-tipos',tipos,'or');
 
-  // Top destinos
-  const dests = topN(groupBy(msg, r => findCol(r,['DESTINO','destino','DIRECCION','destino_ext'])||'Sin dato'), 5);
-  renderProgressList('home-top-dest', dests, 'blue');
+  // Top destinos msg
+  const dests=topN(groupBy(msg,r=>fv(r,['DESTINO','destino','DESTINATARIO'])),5);
+  renderPL('home-dests',dests,'bl');
 
   // Donut puntualidad
-  const tarde = ll.length - puntual;
-  mkChart('chartHomePuntual', {
-    type: 'doughnut',
-    data: {
-      labels: ['Puntual','Tardanza'],
-      datasets: [{ data: [puntual, tarde], backgroundColor: [C_GREEN, C_RED], borderWidth: 2, borderColor: '#fff' }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, cutout:'68%',
-      plugins:{ legend:{display:false} } }
-  });
-  document.getElementById('home-puntual-legend').innerHTML = `
-    <div class="legend-item"><div class="legend-dot" style="background:${C_GREEN}"></div><span>Puntual</span><span class="legend-val">${fmt(puntual)}</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:${C_RED}"></div><span>Tardanza</span><span class="legend-val">${fmt(tarde)}</span></div>`;
+  const tarde=ll.length-puntual;
+  mkCh('ch-home-punt',{type:'doughnut',data:{labels:['Puntual','Tardanza'],datasets:[{data:[puntual,tarde],backgroundColor:[CGR,CRD],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}});
+  document.getElementById('home-punt-leg').innerHTML=`
+    <div class="di"><div class="dd" style="background:${CGR}"></div><span>Puntual</span><span class="dv">${fmt(puntual)}</span></div>
+    <div class="di"><div class="dd" style="background:${CRD}"></div><span>Tardanza</span><span class="dv">${fmt(tarde)}</span></div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // RADICACIONES
-// ═══════════════════════════════════════════════════════════════════
-function buildRadicaciones() {
-  const rows = DATA.radicaciones;
-  if (!rows.length) return;
-
-  const headers = Object.keys(rows[0]);
-  const colFecha = headers.find(h => /fecha|date/i.test(h)) || headers[0];
-  const colDep   = headers.find(h => /depend|area|unidad/i.test(h)) || headers[1];
-  const colUser  = headers.find(h => /usuario|user|nombre|operador/i.test(h)) || headers[2];
-  const colTipo  = headers.find(h => /tipo|tramite|clase/i.test(h)) || headers[3];
-
-  renderKPIs('kpi-radicaciones', [
-    { color:'orange', icon:'fa-solid fa-file-lines', value: fmt(rows.length), label:'Total Radicaciones' },
-    { color:'blue',   icon:'fa-solid fa-building',   value: fmt(Object.keys(groupBy(rows,r=>r[colDep]||'?')).length), label:'Dependencias Activas' },
-    { color:'green',  icon:'fa-solid fa-users',       value: fmt(Object.keys(groupBy(rows,r=>r[colUser]||'?')).length), label:'Usuarios Radicadores' },
-    { color:'amber',  icon:'fa-solid fa-layer-group', value: fmt(Object.keys(groupBy(rows,r=>r[colTipo]||'?')).length), label:'Tipos de Trámite' },
-  ]);
-
-  // Barras horizontales por dependencia
-  const deps = topN(groupBy(rows, r=>r[colDep]||'Sin dato'), 10);
-  mkChart('chartRadDepend', {
-    type: 'bar',
-    data: { labels: deps.map(d=>d[0]), datasets:[{ data:deps.map(d=>d[1]), backgroundColor:C_BLUE+'cc', borderRadius:4, borderSkipped:false }] },
-    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      scales:{ x:{grid:{color:'#f1f5f9'}}, y:{grid:{display:false}} } }
-  });
-
-  // Líneas mensual
-  const meses = groupBy(rows, r => getMonthKey(r[colFecha]));
-  const ml = Object.keys(meses).slice(-10);
-  mkChart('chartRadMensual', {
-    type: 'line',
-    data: { labels:ml, datasets:[{
-      data:ml.map(k=>meses[k]),
-      borderColor:C_ORANGE, backgroundColor:C_ORANGE+'22', fill:true, tension:.4,
-      pointBackgroundColor:C_ORANGE, pointRadius:4
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{grid:{color:'#f1f5f9'}}, x:{grid:{display:false}} } }
-  });
-
-  // Top usuarios
-  const users = topN(groupBy(rows, r=>r[colUser]||'Sin dato'), 5);
-  renderProgressList('rad-top-users', users);
-
-  // Tabla últimas 10
-  document.getElementById('tbodyRad').innerHTML = rows.slice(-10).reverse().map((r,i) => `
-    <tr>
-      <td>${i+1}</td>
-      <td>${r[colFecha]||'–'}</td>
-      <td>${r[colDep]||'–'}</td>
-      <td>${r[colUser]||'–'}</td>
-      <td><span class="badge orange">${r[colTipo]||'–'}</span></td>
-      <td><span class="badge green"><i class="fa-solid fa-check"></i> Radicado</span></td>
-    </tr>`).join('');
+// ═══════════════════════════════════
+// Column keys (flexible detection)
+function radCols(rows){
+  if(!rows.length)return{};
+  const h=Object.keys(rows[0]);
+  const find=(cands)=>{
+    for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}
+    for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}
+    return null;
+  };
+  return{
+    fecha:  find(['FECHA RADICACION','FECHA','fecha','Date','FECHA_RADICACION']),
+    tipo:   find(['TIPO CORRESPONDENCIA','Tipo Correspondencia','TIPO CORR','TIPO']),
+    sede:   find(['SEDE RADICACION','SEDE  RADICACION','SEDE','sede','PUNTO']),
+    canal:  find(['CANAL DE ENTRADA','CANAL ENTRADA','CANAL','canal']),
+    hora:   find(['HORA','hora','HORA RADICACION','HORA_RADICACION','TIME']),
+    user:   find(['USUARIO','usuario','OPERADOR','USER']),
+    estado: find(['ESTADO','estado','STATUS']),
+  };
 }
 
-// ═══════════════════════════════════════════════════════════════════
+function buildRadFilters(){
+  const rows=RAW.rad;
+  const c=radCols(rows);
+  const meses=[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort);
+  const sedes=[...new Set(rows.map(r=>(r[c.sede]||'').trim()).filter(Boolean))].sort();
+  const canales=[...new Set(rows.map(r=>(r[c.canal]||'').trim()).filter(Boolean))].sort();
+  populateSelect('rad-mes',meses,false);
+  populateSelect('rad-sede',sedes,false);
+  populateSelect('rad-canal',canales,false);
+}
+
+function applyRadFilters(){
+  const mes=document.getElementById('rad-mes').value;
+  const sede=document.getElementById('rad-sede').value;
+  const canal=document.getElementById('rad-canal').value;
+  const c=radCols(RAW.rad);
+  FILT.rad=RAW.rad.filter(r=>{
+    if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
+    if(sede&&(r[c.sede]||'').trim()!==sede)return false;
+    if(canal&&(r[c.canal]||'').trim()!==canal)return false;
+    return true;
+  });
+  renderRad();
+}
+
+function clearRadFilters(){
+  ['rad-mes','rad-sede','rad-canal'].forEach(id=>document.getElementById(id).value='');
+  FILT.rad=[...RAW.rad];
+  renderRad();
+}
+
+function buildRad(){
+  buildRadFilters();
+  FILT.rad=[...RAW.rad];
+  renderRad();
+}
+
+function renderRad(){
+  const rows=FILT.rad;
+  const c=radCols(rows.length?rows:RAW.rad);
+
+  renderKPIs('kpi-rad',[
+    {c:'or',i:'fa-solid fa-file-lines',v:fmt(rows.length),l:'Total Radicaciones'},
+    {c:'bl',i:'fa-solid fa-layer-group',v:fmt(Object.keys(groupBy(rows,r=>(r[c.tipo]||''))).length),l:'Tipos Correspondencia'},
+    {c:'gr',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.sede]||''))).length),l:'Sedes Activas'},
+    {c:'am',i:'fa-solid fa-signal',v:fmt(Object.keys(groupBy(rows,r=>(r[c.canal]||''))).length),l:'Canales de Entrada'},
+  ]);
+
+  // Barras horizontales tipo correspondencia (col G)
+  const tipos=topN(groupBy(rows,r=>(r[c.tipo]||'Sin dato').trim()),12);
+  mkCh('ch-rad-tipos',{type:'bar',data:{labels:tipos.map(t=>t[0]),datasets:[{data:tipos.map(t=>t[1]),backgroundColor:COR+'cc',borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+  // Mensual
+  const mMes=groupBy(rows,r=>mesKeyDate(r[c.fecha]||''));
+  const ml=sortedMeses(mMes).slice(-12);
+  mkCh('ch-rad-mes',{type:'line',data:{labels:ml,datasets:[{data:ml.map(k=>mMes[k]),borderColor:COR,backgroundColor:COR+'22',fill:true,tension:.4,pointBackgroundColor:COR,pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}});
+
+  // Sede
+  const mSede=topN(groupBy(rows,r=>(r[c.sede]||'Sin dato').trim()),8);
+  mkCh('ch-rad-sede',{type:'bar',data:{labels:mSede.map(s=>s[0]),datasets:[{data:mSede.map(s=>s[1]),backgroundColor:CBL+'cc',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{maxRotation:30,font:{size:10}}},y:{grid:{color:'#f1f5f9'}}}}});
+
+  // Canal
+  const mCanal=topN(groupBy(rows,r=>(r[c.canal]||'Sin dato').trim()),8);
+  mkCh('ch-rad-canal',{type:'doughnut',data:{labels:mCanal.map(s=>s[0]),datasets:[{data:mCanal.map(s=>s[1]),backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:true,position:'right',labels:{font:{size:10},boxWidth:10,padding:8}}}}});
+
+  // Día de la semana
+  const diasCount={0:0,1:0,2:0,3:0,4:0,5:0,6:0};
+  rows.forEach(r=>{const d=parseDate(r[c.fecha]||'');if(d)diasCount[d.getDay()]++;});
+  mkCh('ch-rad-dia',{type:'bar',data:{labels:DIAS_ES,datasets:[{data:DIAS_ES.map((_,i)=>diasCount[i]),backgroundColor:PAL,borderRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}});
+
+  // Horas de radicación
+  const horasCount=Array(24).fill(0);
+  rows.forEach(r=>{
+    let h=r[c.hora]||'';
+    if(!h)return;
+    const m=h.match(/(\d{1,2})[:h]/);
+    if(m){const hr=+m[1];if(hr>=0&&hr<24)horasCount[hr]++;}
+  });
+  const hLabels=Array.from({length:24},(_,i)=>i.toString().padStart(2,'0')+'h');
+  mkCh('ch-rad-hora',{type:'bar',data:{labels:hLabels,datasets:[{data:horasCount,backgroundColor:CBL+'aa',borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},ticks:{stepSize:1}}},
+    plugins:{tooltip:{callbacks:{title:t=>'Hora: '+t[0].label,label:ctx=>'Radicaciones: '+ctx.parsed.y}}}}});
+}
+
+// ═══════════════════════════════════
 // INMEDIATOS
-// ═══════════════════════════════════════════════════════════════════
-function buildInmediatos() {
-  const rows = DATA.inmediatos;
-  if (!rows.length) {
-    renderKPIs('kpi-inmediatos',[{color:'orange',icon:'fa-solid fa-bolt',value:'–',label:'Sin datos cargados'}]);
+// ═══════════════════════════════════
+function inmCols(rows){
+  if(!rows.length)return{};
+  const h=Object.keys(rows[0]);
+  const find=cands=>{for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}return null;};
+  return{
+    orden:  find(['N° ORDEN','N ORDEN','ORDEN','NO ORDEN','#ORDEN','NUMERO ORDEN']),
+    mes:    find(['MES FAC','MES','MESFAC','MES FACTURACIÓN','MES FACTURACION']),
+    proceso:find(['PROCESO']),
+    servicio:find(['SERVICIO']),
+    estado: find(['ESTADO','STATUS']),
+    fecha:  find(['FECHA','DATE','FECHA RADICACION']),
+  };
+}
+
+function buildInmFilters(){
+  const rows=RAW.inm;
+  const c=inmCols(rows);
+  const meses=c.mes?[...new Set(rows.map(r=>(r[c.mes]||'').trim()).filter(Boolean))].sort()
+    :[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort);
+  populateSelect('inm-mes',meses,false);
+}
+
+function applyInmFilters(){
+  const mes=document.getElementById('inm-mes').value;
+  const c=inmCols(RAW.inm);
+  FILT.inm=RAW.inm.filter(r=>{
+    if(mes){
+      const v=c.mes?(r[c.mes]||'').trim():mesKeyDate(r[c.fecha]||'');
+      if(v!==mes)return false;
+    }
+    return true;
+  });
+  renderInm();
+}
+
+function clearInmFilters(){
+  document.getElementById('inm-mes').value='';
+  FILT.inm=[...RAW.inm];
+  renderInm();
+}
+
+function buildInm(){
+  buildInmFilters();
+  FILT.inm=[...RAW.inm];
+  renderInm();
+}
+
+function renderInm(){
+  const rows=FILT.inm;
+  const c=inmCols(rows.length?rows:RAW.inm);
+
+  if(!rows.length){
+    renderKPIs('kpi-inm',[{c:'am',i:'fa-solid fa-bolt',v:'Sin datos',l:'Conecta la hoja Inmediatos'}]);
     return;
   }
 
-  const headers = Object.keys(rows[0]);
-  const colFecha    = headers.find(h => /fecha|date/i.test(h)) || headers[0];
-  const colMensajero= headers.find(h => /mensajero|nombre|user|operador/i.test(h)) || headers[1];
-  const colDestino  = headers.find(h => /destino|direccion|lugar/i.test(h)) || headers[2];
-  const colHora     = headers.find(h => /hora|tiempo|entrega/i.test(h)) || headers[3];
-  const colEstado   = headers.find(h => /estado|cumpl|result/i.test(h)) || headers[4];
+  // Órdenes distintas
+  const ordenesUnicas=new Set(rows.map(r=>fv(r,['N° ORDEN','N ORDEN','ORDEN']).trim()).filter(Boolean)).size;
+  // Cerrados
+  const cerrados=rows.filter(r=>fv(r,['ESTADO']).toLowerCase().includes('cerrado')).length;
+  const procesos=Object.keys(groupBy(rows,r=>fv(r,['PROCESO']))).length;
 
-  const atiempo = rows.filter(r => {
-    const v = (r[colEstado]||'').toLowerCase();
-    return v.includes('tiempo') || v.includes('cumple') || v.includes('ok') || v.includes('entregado');
-  }).length;
-  const gaugePct = pctN(atiempo, rows.length);
-
-  renderKPIs('kpi-inmediatos', [
-    { color:'orange', icon:'fa-solid fa-bolt', value:fmt(rows.length), label:'Total Entregas Inmediatas' },
-    { color:'green',  icon:'fa-solid fa-check-circle', value:fmt(atiempo), label:'A Tiempo', sub:pct(atiempo,rows.length) },
-    { color:'red',    icon:'fa-solid fa-clock', value:fmt(rows.length-atiempo), label:'Con Demora', sub:pct(rows.length-atiempo,rows.length) },
-    { color:'blue',   icon:'fa-solid fa-users', value:fmt(Object.keys(groupBy(rows,r=>r[colMensajero]||'?')).length), label:'Mensajeros Activos' },
+  renderKPIs('kpi-inm',[
+    {c:'or',i:'fa-solid fa-hashtag',v:fmt(ordenesUnicas),l:'Órdenes Distintas'},
+    {c:'gr',i:'fa-solid fa-check-circle',v:fmt(cerrados),l:'Cerradas (Oportunas)',s:pctS(cerrados,rows.length),sc:'var(--green)'},
+    {c:'rd',i:'fa-solid fa-clock',v:fmt(rows.length-cerrados),l:'Abiertas / Pendientes',s:pctS(rows.length-cerrados,rows.length)},
+    {c:'bl',i:'fa-solid fa-sitemap',v:fmt(procesos),l:'Procesos Activos'},
   ]);
 
-  // Gauge
-  document.getElementById('gaugeValue').textContent = gaugePct + '%';
-  document.getElementById('gaugeLabel').textContent = `${fmt(atiempo)} a tiempo de ${fmt(rows.length)}`;
-  const gaugeColor = gaugePct >= 90 ? C_GREEN : gaugePct >= 70 ? C_AMBER : C_RED;
-  mkChart('chartGauge', {
-    type: 'doughnut',
-    data: {
-      datasets:[{ data:[gaugePct, 100-gaugePct],
-        backgroundColor:[gaugeColor,'#f1f5f9'], borderWidth:0, circumference:180, rotation:270 }]
-    },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'75%', plugins:{legend:{display:false}, tooltip:{enabled:false}} }
+  // Órdenes por mes
+  const getMes=r=>c.mes?(r[c.mes]||'Sin dato').trim():mesKeyDate(r[c.fecha]||'');
+  const mesCounts={};
+  const mesOrdenes={};
+  rows.forEach(r=>{
+    const m=getMes(r);
+    if(!mesOrdenes[m])mesOrdenes[m]=new Set();
+    const ord=fv(r,['N° ORDEN','N ORDEN','ORDEN']).trim();
+    if(ord)mesOrdenes[m].add(ord);
+    mesCounts[m]=(mesCounts[m]||0)+1;
   });
+  const ml=Object.keys(mesCounts).sort();
+  const ordCount=ml.map(k=>mesOrdenes[k]?mesOrdenes[k].size:0);
+  mkCh('ch-inm-ordenes',{type:'bar',data:{labels:ml,datasets:[{data:ordCount,backgroundColor:CAM+'cc',borderRadius:5,borderSkipped:false,label:'Órdenes distintas'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'},ticks:{stepSize:1}}}}});
 
-  // Tendencia mensual
-  const meses = {};
-  rows.forEach(r => {
-    const mes = getMonthKey(r[colFecha]);
-    if (!meses[mes]) meses[mes] = { total:0, ok:0 };
-    meses[mes].total++;
-    const v = (r[colEstado]||'').toLowerCase();
-    if (v.includes('tiempo')||v.includes('cumple')||v.includes('ok')||v.includes('entregado')) meses[mes].ok++;
-  });
-  const ml = Object.keys(meses).slice(-10);
-  mkChart('chartInmMensual', {
-    type:'line',
-    data:{ labels:ml, datasets:[{
-      data:ml.map(k=>pctN(meses[k].ok,meses[k].total)),
-      borderColor:C_AMBER, backgroundColor:C_AMBER+'22', fill:true, tension:.4,
-      pointBackgroundColor:C_AMBER, pointRadius:4
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{ y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}}, x:{grid:{display:false}} } }
-  });
+  // Estado donut
+  const estados=topN(groupBy(rows,r=>(fv(r,['ESTADO'])||'Sin dato').trim()),6);
+  const eColors=estados.map((e,i)=>{const v=e[0].toLowerCase();return v.includes('cerrado')?CGR:v.includes('pendiente')||v.includes('abierto')?CAM:v.includes('cancel')?CRD:PAL[i%PAL.length];});
+  mkCh('ch-inm-estado',{type:'doughnut',data:{labels:estados.map(e=>e[0]),datasets:[{data:estados.map(e=>e[1]),backgroundColor:eColors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
+  document.getElementById('inm-estado-leg').innerHTML=estados.map((e,i)=>`<div class="di"><div class="dd" style="background:${eColors[i]}"></div><span>${e[0]}</span><span class="dv">${fmt(e[1])}</span></div>`).join('');
 
-  // Top mensajeros
-  const top = topN(groupBy(rows, r=>r[colMensajero]||'Sin dato'), 5);
-  renderProgressList('inm-top-mensajeros', top);
+  // Proceso ranking
+  const procRank=topN(groupBy(rows,r=>(fv(r,['PROCESO'])||'Sin dato').trim()),8);
+  renderPL('inm-proceso',procRank,'bl');
 
-  // Tabla
-  document.getElementById('tbodyInm').innerHTML = rows.slice(-10).reverse().map((r,i)=>`
+  // Servicio ranking
+  const srvRank=topN(groupBy(rows,r=>(fv(r,['SERVICIO'])||'Sin dato').trim()),8);
+  renderPL('inm-servicio',srvRank,'or');
+
+  // Tabla últimos 20
+  document.getElementById('tb-inm').innerHTML=rows.slice(-20).reverse().map((r,i)=>`
     <tr>
       <td>${i+1}</td>
-      <td>${r[colFecha]||'–'}</td>
-      <td>${r[colMensajero]||'–'}</td>
-      <td>${r[colDestino]||'–'}</td>
-      <td>${r[colHora]||'–'}</td>
-      <td>${getEstadoBadge(r[colEstado])}</td>
+      <td>${getMes(r)}</td>
+      <td><strong>${fv(r,['N° ORDEN','N ORDEN','ORDEN'])||'–'}</strong></td>
+      <td>${fv(r,['PROCESO'])||'–'}</td>
+      <td>${fv(r,['SERVICIO'])||'–'}</td>
+      <td>${badgeEstado(fv(r,['ESTADO']))}</td>
     </tr>`).join('');
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // LLEGADA
-// ═══════════════════════════════════════════════════════════════════
-function buildLlegada() {
-  const rows = DATA.llegada;
-  if (!rows.length) {
-    renderKPIs('kpi-llegada',[{color:'green',icon:'fa-solid fa-user-clock',value:'–',label:'Sin datos cargados'}]);
+// ═══════════════════════════════════
+function llCols(rows){
+  if(!rows.length)return{};
+  const h=Object.keys(rows[0]);
+  const find=cands=>{for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}return null;};
+  return{
+    fecha:      find(['FECHA','fecha','DATE']),
+    nombre:     find(['NOMBRE','nombre','EMPLEADO','FUNCIONARIO','NOMBRE EMPLEADO']),
+    sede:       find(['SEDE','sede','PUNTO','VENTANILLA','LUGAR']),
+    hora:       find(['HORA','hora','HORA LLEGADA','HORA DE LLEGADA']),
+    cumplimiento:find(['CUMPLIMIENTO','cumplimiento','ESTADO','PUNTUAL','NOVEDAD']),
+    obs:        find(['OBSERVACIONES','OBSERVACION','OBS','NOVEDAD','COMENTARIO']),
+  };
+}
+
+function buildLlFilters(){
+  const rows=RAW.ll;
+  const c=llCols(rows);
+  const nombres=c.nombre?[...new Set(rows.map(r=>(r[c.nombre]||'').trim()).filter(Boolean))].sort():[];
+  populateSelect('ll-nombre',nombres,false);
+}
+
+function applyLlFilters(){
+  const nombre=document.getElementById('ll-nombre').value;
+  const desde=document.getElementById('ll-desde').value;
+  const hasta=document.getElementById('ll-hasta').value;
+  const c=llCols(RAW.ll);
+  FILT.ll=RAW.ll.filter(r=>{
+    if(nombre&&(r[c.nombre]||'').trim()!==nombre)return false;
+    if(desde||hasta){
+      const d=parseDate(r[c.fecha]||'');
+      if(!d)return false;
+      if(desde&&d<new Date(desde))return false;
+      if(hasta&&d>new Date(hasta+'T23:59:59'))return false;
+    }
+    return true;
+  });
+  renderLl();
+}
+
+function clearLlFilters(){
+  ['ll-nombre'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ll-desde').value='';
+  document.getElementById('ll-hasta').value='';
+  FILT.ll=[...RAW.ll];
+  renderLl();
+}
+
+function buildLl(){
+  buildLlFilters();
+  FILT.ll=[...RAW.ll];
+  renderLl();
+}
+
+function renderLl(){
+  const rows=FILT.ll;
+  const c=llCols(rows.length?rows:RAW.ll);
+
+  if(!rows.length){
+    renderKPIs('kpi-ll',[{c:'gr',i:'fa-solid fa-user-clock',v:'Sin datos',l:'Conecta la hoja Llegada'}]);
+    document.getElementById('obs-list').innerHTML=emptyState();
     return;
   }
 
-  const headers = Object.keys(rows[0]);
-  const colFecha   = headers.find(h => /fecha|date/i.test(h)) || headers[0];
-  const colEmp     = headers.find(h => /empleado|nombre|nombre_emp|user/i.test(h)) || headers[1];
-  const colSede    = headers.find(h => /sede|punto|lugar|ubicacion/i.test(h)) || headers[2];
-  const colHora    = headers.find(h => /hora|llegada|ingreso/i.test(h)) || headers[3];
-  const colEstado  = headers.find(h => /estado|puntual|novedad/i.test(h)) || headers[4];
+  // Clasificar puntualidad
+  const isCumple=r=>{const v=(r[c.cumplimiento]||'').toLowerCase();return v.includes('cumple')||v.includes('puntual')||v.includes('ok')||v.includes('a tiempo')||v.includes('sin novedad');};
+  const puntual=rows.filter(isCumple).length;
+  const tarde=rows.length-puntual;
 
-  const puntual = rows.filter(r=>{
-    const v=(r[colEstado]||'').toLowerCase();
-    return v.includes('puntual')||v.includes('tiempo')||v.includes('ok')||v.includes('sin novedad');
-  }).length;
-  const tarde = rows.length - puntual;
-  const pPct = pctN(puntual, rows.length);
-
-  renderKPIs('kpi-llegada', [
-    { color:'orange', icon:'fa-solid fa-users', value:fmt(rows.length), label:'Registros de Llegada' },
-    { color:'green',  icon:'fa-solid fa-check', value:pPct+'%', label:'Tasa de Puntualidad', sub:`${fmt(puntual)} puntuales` },
-    { color:'red',    icon:'fa-solid fa-clock', value:fmt(tarde), label:'Tardanzas', sub:pct(tarde,rows.length) },
-    { color:'blue',   icon:'fa-solid fa-building', value:fmt(Object.keys(groupBy(rows,r=>r[colSede]||'?')).length), label:'Sedes Monitoreadas' },
+  renderKPIs('kpi-ll',[
+    {c:'or',i:'fa-solid fa-users',v:fmt(rows.length),l:'Registros de Llegada'},
+    {c:'gr',i:'fa-solid fa-check',v:pctS(puntual,rows.length),l:'Tasa de Puntualidad',s:fmt(puntual)+' puntuales',sc:'var(--green)'},
+    {c:'rd',i:'fa-solid fa-clock',v:fmt(tarde),l:'Tardanzas',s:pctS(tarde,rows.length)},
+    {c:'bl',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.sede]||''))).filter(k=>k).length),l:'Ventanillas Monitoreadas'},
   ]);
 
   // Donut
-  mkChart('chartLlegadaDonut', {
-    type:'doughnut',
-    data:{ labels:['Puntual','Tardanza'], datasets:[{
-      data:[puntual,tarde], backgroundColor:[C_GREEN,C_RED], borderWidth:2, borderColor:'#fff'
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{legend:{display:false}} }
-  });
-  document.getElementById('llegada-donut-legend').innerHTML = `
-    <div class="legend-item"><div class="legend-dot" style="background:${C_GREEN}"></div><span>Puntual</span><span class="legend-val">${fmt(puntual)} (${pPct}%)</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:${C_RED}"></div><span>Tardanza</span><span class="legend-val">${fmt(tarde)} (${100-pPct}%)</span></div>`;
+  mkCh('ch-ll-donut',{type:'doughnut',data:{labels:['Puntual','Tardanza'],datasets:[{data:[puntual,tarde],backgroundColor:[CGR,CRD],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}});
+  document.getElementById('ll-donut-leg').innerHTML=`
+    <div class="di"><div class="dd" style="background:${CGR}"></div><span>Puntual</span><span class="dv">${fmt(puntual)} (${pctS(puntual,rows.length)})</span></div>
+    <div class="di"><div class="dd" style="background:${CRD}"></div><span>Tardanza</span><span class="dv">${fmt(tarde)} (${pctS(tarde,rows.length)})</span></div>`;
 
-  // Por sede
-  const sedes = topN(groupBy(rows,r=>r[colSede]||'Sin dato'),8);
-  mkChart('chartLlegadaSede',{
-    type:'bar',
-    data:{labels:sedes.map(s=>s[0]), datasets:[{data:sedes.map(s=>s[1]),backgroundColor:C_BLUE+'cc',borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false, scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}
+  // Cumplimiento por ventanilla/sede
+  const ventObj={};
+  rows.forEach(r=>{
+    const v=(r[c.sede]||'Sin dato').trim();
+    if(!ventObj[v])ventObj[v]={t:0,c:0};
+    ventObj[v].t++;
+    if(isCumple(r))ventObj[v].c++;
   });
+  const vents=Object.entries(ventObj).sort((a,b)=>b[1].t-a[1].t).slice(0,8);
+  mkCh('ch-ll-ventanilla',{type:'bar',
+    data:{labels:vents.map(v=>v[0]),
+      datasets:[
+        {label:'Puntual',data:vents.map(v=>v[1].c),backgroundColor:CGR+'cc',borderRadius:4,borderSkipped:false},
+        {label:'Tardanza',data:vents.map(v=>v[1].t-v[1].c),backgroundColor:CRD+'cc',borderRadius:4,borderSkipped:false},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:10}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:30,font:{size:9}}},y:{stacked:true,grid:{color:'#f1f5f9'}}}}});
 
   // Mensual
-  const meses={};
+  const mesObj={};
   rows.forEach(r=>{
-    const mes=getMonthKey(r[colFecha]);
-    if(!meses[mes])meses[mes]={total:0,puntual:0};
-    meses[mes].total++;
-    const v=(r[colEstado]||'').toLowerCase();
-    if(v.includes('puntual')||v.includes('tiempo')||v.includes('ok'))meses[mes].puntual++;
+    const m=mesKeyDate(r[c.fecha]||'');
+    if(!mesObj[m])mesObj[m]={t:0,c:0};
+    mesObj[m].t++;
+    if(isCumple(r))mesObj[m].c++;
   });
-  const ml=Object.keys(meses).slice(-10);
-  mkChart('chartLlegadaMensual',{
-    type:'line',
-    data:{labels:ml, datasets:[
-      {label:'Puntuales %', data:ml.map(k=>pctN(meses[k].puntual,meses[k].total)),
-       borderColor:C_GREEN,backgroundColor:C_GREEN+'22',fill:true,tension:.4,pointRadius:4},
+  const ml=sortedMeses(mesObj).slice(-10);
+  mkCh('ch-ll-mes',{type:'line',
+    data:{labels:ml,datasets:[
+      {label:'% Puntual',data:ml.map(k=>pctN(mesObj[k].c,mesObj[k].t)),borderColor:CGR,backgroundColor:CGR+'22',fill:true,tension:.4,pointBackgroundColor:CGR,pointRadius:4},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true}},
-      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}
-  });
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
 
-  // Tabla
-  document.getElementById('tbodyLlegada').innerHTML = rows.slice(-10).reverse().map((r,i)=>`
-    <tr>
-      <td>${i+1}</td>
-      <td>${r[colFecha]||'–'}</td>
-      <td>${r[colEmp]||'–'}</td>
-      <td>${r[colSede]||'–'}</td>
-      <td>${r[colHora]||'–'}</td>
-      <td>${getEstadoBadge(r[colEstado])}</td>
-    </tr>`).join('');
+  // Observaciones
+  const obsRows=rows.filter(r=>(r[c.obs]||'').trim()).slice(-30).reverse();
+  if(obsRows.length){
+    document.getElementById('obs-list').innerHTML=obsRows.map(r=>`
+      <div class="obs-item">
+        <div class="obs-meta">
+          <strong>${r[c.fecha]||'Sin fecha'}</strong>
+          <span>${(r[c.sede]||'Sin sede').trim()}</span>
+          <span>${(r[c.nombre]||'').trim()}</span>
+        </div>
+        <div class="obs-txt">${(r[c.obs]||'').trim()}</div>
+      </div>`).join('');
+  } else {
+    document.getElementById('obs-list').innerHTML=emptyState('No hay observaciones registradas');
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // NO CONFORMIDADES
-// ═══════════════════════════════════════════════════════════════════
-function buildNoConformidades() {
-  const rows = DATA.noConformidades;
-  if (!rows.length) {
-    renderKPIs('kpi-nc',[{color:'red',icon:'fa-solid fa-triangle-exclamation',value:'–',label:'Sin datos cargados'}]);
+// ═══════════════════════════════════
+function ncCols(rows){
+  if(!rows.length)return{};
+  const h=Object.keys(rows[0]);
+  const find=cands=>{for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}return null;};
+  return{
+    fecha:    find(['FECHA RECEPCIÓN','FECHA RECEPCION','FECHA RECEP','FECHA','fecha']),
+    caso:     find(['CASO','N° CASO','NO CASO','NUMERO','RADICADO','ID']),
+    area:     find(['ÁREA','AREA','DEPENDENCIA','UNIDAD']),
+    tipo:     find(['TIPO','CLASE','CATEGORIA','TIPO NC']),
+    resp:     find(['RESPONSABLE','ENCARGADO','ASIGNADO','FUNCIONARIO']),
+    cumpl:    find(['CUMPLIMIENTO ANS','CUMPLIMIENTO','ANS','RESULTADO']),
+    tResp:    find(['T. RESPUESTA','T RESPUESTA','TIEMPO RESPUESTA','DIAS RESPUESTA','T.RESPUESTA']),
+    tPlan:    find(['T. PLAN ACCION','T PLAN ACCION','TIEMPO PLAN','T.PLAN ACCION','T. PLAN DE ACCION']),
+  };
+}
+
+function buildNcFilters(){
+  const rows=RAW.nc;
+  const c=ncCols(rows);
+  const meses=c.fecha?[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort):[];
+  populateSelect('nc-mes',meses,false);
+}
+
+function applyNcFilters(){
+  const mes=document.getElementById('nc-mes').value;
+  const c=ncCols(RAW.nc);
+  FILT.nc=RAW.nc.filter(r=>{
+    if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
+    return true;
+  });
+  renderNc();
+}
+
+function clearNcFilters(){
+  document.getElementById('nc-mes').value='';
+  FILT.nc=[...RAW.nc];
+  renderNc();
+}
+
+function buildNc(){
+  buildNcFilters();
+  FILT.nc=[...RAW.nc];
+  renderNc();
+}
+
+function renderNc(){
+  const rows=FILT.nc;
+  const c=ncCols(rows.length?rows:RAW.nc);
+
+  if(!rows.length){
+    renderKPIs('kpi-nc',[{c:'rd',i:'fa-solid fa-triangle-exclamation',v:'Sin datos',l:'Conecta la hoja No Conformidades'}]);
     return;
   }
 
-  const headers = Object.keys(rows[0]);
-  const colFecha = headers.find(h=>/fecha|date/i.test(h))||headers[0];
-  const colCaso  = headers.find(h=>/caso|numero|id|radicado/i.test(h))||headers[1];
-  const colArea  = headers.find(h=>/area|dependen|unidad/i.test(h))||headers[2];
-  const colTipo  = headers.find(h=>/tipo|clase|categoria/i.test(h))||headers[3];
-  const colResp  = headers.find(h=>/responsable|encargado|asignado/i.test(h))||headers[4];
-  const colANS   = headers.find(h=>/cumpl|ans|result/i.test(h))||headers[headers.length-1];
+  const isCumple=r=>{const v=(r[c.cumpl]||'').toLowerCase();return v.includes('cumple')&&!v.includes('no');};
+  const cumple=rows.filter(isCumple).length;
+  const noCumple=rows.length-cumple;
+  const pC=pctN(cumple,rows.length);
 
-  const cumple = rows.filter(r=>{
-    const v=(r[colANS]||'').toLowerCase();
-    return v.includes('cumple')&&!v.includes('no');
-  }).length;
-  const noCumple = rows.length - cumple;
-  const pCumple = pctN(cumple,rows.length);
+  // Promedios T. Respuesta y T. Plan Acción
+  const parseNum=v=>{if(!v)return null;const n=parseFloat((v+'').replace(',','.'));return isNaN(n)?null:n;};
+  const tRespVals=rows.map(r=>parseNum(r[c.tResp])).filter(v=>v!==null);
+  const tPlanVals=rows.map(r=>parseNum(r[c.tPlan])).filter(v=>v!==null);
 
   renderKPIs('kpi-nc',[
-    {color:'orange',icon:'fa-solid fa-list',value:fmt(rows.length),label:'Total No Conformidades'},
-    {color:'green', icon:'fa-solid fa-shield-check',value:pCumple+'%',label:'Cumple ANS',sub:`${fmt(cumple)} casos`,subColor:'var(--success)'},
-    {color:'red',   icon:'fa-solid fa-circle-xmark',value:fmt(noCumple),label:'No Cumple ANS',sub:pct(noCumple,rows.length)},
-    {color:'blue',  icon:'fa-solid fa-building',value:fmt(Object.keys(groupBy(rows,r=>r[colArea]||'?')).length),label:'Áreas Involucradas'},
+    {c:'or',i:'fa-solid fa-list',v:fmt(rows.length),l:'Total No Conformidades'},
+    {c:'gr',i:'fa-solid fa-shield-check',v:pC+'%',l:'Cumple ANS',s:fmt(cumple)+' casos',sc:pC>=80?'var(--green)':'var(--red)'},
+    {c:'rd',i:'fa-solid fa-circle-xmark',v:fmt(noCumple),l:'No Cumple ANS',s:pctS(noCumple,rows.length)},
+    {c:'bl',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.area]||''))).filter(k=>k).length),l:'Áreas Involucradas'},
   ]);
 
-  // Barras ANS
-  const ansEl = document.getElementById('ans-cumple-pct');
-  if (ansEl) ansEl.textContent = pCumple + '%';
-  const noEl = document.getElementById('ans-nocumple-pct');
-  if (noEl) noEl.textContent = (100-pCumple)+'%';
+  // ANS bars
+  document.getElementById('nc-cumple-pct').textContent=pC+'%';
+  document.getElementById('nc-nocumple-pct').textContent=(100-pC)+'%';
   setTimeout(()=>{
-    const f1 = document.getElementById('ans-fill-cumple');
-    if (f1) f1.style.width = pCumple+'%';
-    const f2 = document.getElementById('ans-fill-nocumple');
-    if (f2) f2.style.width = (100-pCumple)+'%';
-  },400);
+    const fc=document.getElementById('nc-fill-c');if(fc)fc.style.width=pC+'%';
+    const fn=document.getElementById('nc-fill-nc');if(fn)fn.style.width=(100-pC)+'%';
+  },300);
+
+  // Promedios
+  document.getElementById('nc-avg-resp').textContent=tRespVals.length?avg(tRespVals)+' días':'–';
+  document.getElementById('nc-avg-plan').textContent=tPlanVals.length?avg(tPlanVals)+' días':'–';
 
   // Línea evolución mensual
-  const meses={};
+  const mesObj={};
   rows.forEach(r=>{
-    const mes=getMonthKey(r[colFecha]);
-    if(!meses[mes])meses[mes]={total:0,cumple:0};
-    meses[mes].total++;
-    const v=(r[colANS]||'').toLowerCase();
-    if(v.includes('cumple')&&!v.includes('no'))meses[mes].cumple++;
+    const m=mesKeyDate(r[c.fecha]||'');
+    if(!mesObj[m])mesObj[m]={t:0,c:0};
+    mesObj[m].t++;
+    if(isCumple(r))mesObj[m].c++;
   });
-  const ml=Object.keys(meses).slice(-12);
-  mkChart('chartNCLinea',{
-    type:'line',
-    data:{labels:ml,datasets:[{
-      label:'% Cumplimiento ANS',
-      data:ml.map(k=>pctN(meses[k].cumple,meses[k].total)),
-      borderColor:C_GREEN,backgroundColor:C_GREEN+'22',fill:true,tension:.4,
-      pointBackgroundColor:C_GREEN,pointRadius:5,pointHoverRadius:7
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}
-  });
+  const ml=sortedMeses(mesObj).slice(-12);
+  mkCh('ch-nc-linea',{type:'line',data:{labels:ml,datasets:[
+    {label:'% Cumplimiento',data:ml.map(k=>pctN(mesObj[k].c,mesObj[k].t)),borderColor:CGR,backgroundColor:CGR+'22',fill:true,tension:.4,pointBackgroundColor:CGR,pointRadius:5},
+    {label:'Cantidad NC',data:ml.map(k=>mesObj[k].t),borderColor:COR,backgroundColor:'transparent',tension:.4,pointBackgroundColor:COR,pointRadius:4,yAxisID:'y2'},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:10}}},
+    scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},y2:{position:'right',grid:{display:false}},x:{grid:{display:false}}}}});
 
   // Por tipo
-  const tipos=topN(groupBy(rows,r=>r[colTipo]||'Sin dato'),6);
-  mkChart('chartNCTipo',{
-    type:'bar',
-    data:{labels:tipos.map(t=>t[0]),datasets:[{data:tipos.map(t=>t[1]),backgroundColor:PALETTE,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}
-  });
+  const tipos=topN(groupBy(rows,r=>(r[c.tipo]||'Sin dato').trim()),6);
+  mkCh('ch-nc-tipo',{type:'bar',data:{labels:tipos.map(t=>t[0]),datasets:[{data:tipos.map(t=>t[1]),backgroundColor:PAL,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#f1f5f9'}}}}});
 
   // Por área
-  const areas=topN(groupBy(rows,r=>r[colArea]||'Sin dato'),6);
-  mkChart('chartNCArea',{
-    type:'bar',
-    data:{labels:areas.map(a=>a[0]),datasets:[{data:areas.map(a=>a[1]),backgroundColor:C_BLUE+'cc',borderRadius:4}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false}}}}
-  });
+  const areas=topN(groupBy(rows,r=>(r[c.area]||'Sin dato').trim()),6);
+  mkCh('ch-nc-area',{type:'bar',data:{labels:areas.map(a=>a[0]),datasets:[{data:areas.map(a=>a[1]),backgroundColor:CBL+'cc',borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
-  // Tabla últimos 10 con semáforo
-  document.getElementById('tbodyNC').innerHTML = rows.slice(-10).reverse().map((r,i)=>{
-    const v=(r[colANS]||'').toLowerCase();
-    const isCumple = v.includes('cumple')&&!v.includes('no');
-    return `<tr>
+  // Tabla últimos 10
+  document.getElementById('tb-nc').innerHTML=rows.slice(-10).reverse().map((r,i)=>{
+    const v=(r[c.cumpl]||'').toLowerCase();
+    const ok=v.includes('cumple')&&!v.includes('no');
+    return`<tr>
       <td>${i+1}</td>
-      <td>${r[colFecha]||'–'}</td>
-      <td><strong>${r[colCaso]||'N/A'}</strong></td>
-      <td>${r[colArea]||'–'}</td>
-      <td>${r[colTipo]||'–'}</td>
-      <td>${r[colResp]||'–'}</td>
-      <td><span class="badge ${isCumple?'green':'red'}">
-        <i class="fa-solid ${isCumple?'fa-check':'fa-times'}"></i>
-        ${isCumple?'Cumple':'No Cumple'}
-      </span></td>
+      <td>${r[c.fecha]||'–'}</td>
+      <td><strong>${r[c.caso]||'N/A'}</strong></td>
+      <td>${r[c.area]||'–'}</td>
+      <td>${r[c.tipo]||'–'}</td>
+      <td>${r[c.resp]||'–'}</td>
+      <td style="text-align:center">${r[c.tResp]||'–'}</td>
+      <td style="text-align:center">${r[c.tPlan]||'–'}</td>
+      <td><span class="badge ${ok?'gr':'rd'}"><i class="fa-solid ${ok?'fa-check':'fa-times'}"></i> ${ok?'Cumple':'No Cumple'}</span></td>
     </tr>`;
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // MENSAJERÍA
-// ═══════════════════════════════════════════════════════════════════
-function buildMensajeria() {
-  const rows = DATA.mensajeria;
-  if (!rows.length) {
-    renderKPIs('kpi-mensajeria',[{color:'green',icon:'fa-solid fa-truck',value:'–',label:'Sin datos cargados'}]);
+// ═══════════════════════════════════
+function msgCols(rows){
+  if(!rows.length)return{};
+  const h=Object.keys(rows[0]);
+  const find=cands=>{for(const c of cands){const f=h.find(k=>k.trim().toLowerCase()===c.toLowerCase());if(f)return f;}for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}return null;};
+  return{
+    fecha:    find(['FECHA','fecha','DATE','FECHA ENVIO','FECHA_ENVIO']),
+    remit:    find(['REMITENTE','remitente','DE','ORIGEN','DESDE','SOLICITANTE']),
+    destino:  find(['DESTINO','destino','PARA','TO','DESTINATARIO','EMPRESA DESTINO']),
+    mensajero:find(['MENSAJERO','mensajero','NOMBRE MENSAJERO','COURIER']),
+    estado:   find(['ESTADO','STATUS','RESULTADO','ENTREGA']),
+    tipo:     find(['TIPO','SERVICIO','CLASE']),
+  };
+}
+
+function buildMsg(){
+  const rows=RAW.msg;
+  const c=msgCols(rows);
+
+  if(!rows.length){
+    renderKPIs('kpi-msg',[{c:'gr',i:'fa-solid fa-truck',v:'Sin datos',l:'Conecta la hoja Mensajería'}]);
     return;
   }
 
-  const headers = Object.keys(rows[0]);
-  const colFecha   = headers.find(h=>/fecha|date/i.test(h))||headers[0];
-  const colRemit   = headers.find(h=>/remit|origen|de|sender/i.test(h))||headers[1];
-  const colDest    = headers.find(h=>/destino|para|to|dirigido/i.test(h))||headers[2];
-  const colMensaj  = headers.find(h=>/mensajero|mensaj|nombre_men/i.test(h))||headers[3];
-  const colEstado  = headers.find(h=>/estado|result|entrega/i.test(h))||headers[4];
+  const entregados=rows.filter(r=>{const v=fv(r,['ESTADO']).toLowerCase();return v.includes('entregado')||v.includes('ok')||v.includes('completo')||v.includes('cerrado');}).length;
 
-  const entregados = rows.filter(r=>{
-    const v=(r[colEstado]||'').toLowerCase();
-    return v.includes('entregado')||v.includes('ok')||v.includes('completo');
-  }).length;
-
-  renderKPIs('kpi-mensajeria',[
-    {color:'orange',icon:'fa-solid fa-truck',value:fmt(rows.length),label:'Total Envíos'},
-    {color:'green', icon:'fa-solid fa-check-circle',value:fmt(entregados),label:'Entregados',sub:pct(entregados,rows.length)},
-    {color:'blue',  icon:'fa-solid fa-location-dot',value:fmt(Object.keys(groupBy(rows,r=>r[colDest]||'?')).length),label:'Destinos Únicos'},
-    {color:'amber', icon:'fa-solid fa-person-biking',value:fmt(Object.keys(groupBy(rows,r=>r[colMensaj]||'?')).length),label:'Mensajeros Activos'},
+  renderKPIs('kpi-msg',[
+    {c:'or',i:'fa-solid fa-truck',v:fmt(rows.length),l:'Total Envíos'},
+    {c:'gr',i:'fa-solid fa-check-circle',v:fmt(entregados),l:'Entregados',s:pctS(entregados,rows.length)},
+    {c:'bl',i:'fa-solid fa-location-dot',v:fmt(Object.keys(groupBy(rows,r=>(r[c.destino]||''))).filter(k=>k).length),l:'Destinos Únicos'},
+    {c:'am',i:'fa-solid fa-person-biking',v:fmt(Object.keys(groupBy(rows,r=>(r[c.mensajero]||''))).filter(k=>k).length),l:'Mensajeros'},
   ]);
 
-  // Top destinos barra horizontal
-  const dests=topN(groupBy(rows,r=>r[colDest]||'Sin dato'),10);
-  mkChart('chartMensajeriaDestinos',{
-    type:'bar',
-    data:{labels:dests.map(d=>d[0]),datasets:[{data:dests.map(d=>d[1]),
-      backgroundColor:dests.map((_,i)=>PALETTE[i%PALETTE.length]+'cc'),borderRadius:4}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
-  });
+  // Top destinos
+  const dests=topN(groupBy(rows,r=>(r[c.destino]||'Sin dato').trim()),10);
+  mkCh('ch-msg-dest',{type:'bar',data:{labels:dests.map(d=>d[0]),datasets:[{data:dests.map(d=>d[1]),backgroundColor:dests.map((_,i)=>PAL[i%PAL.length]+'cc'),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
   // Mensual
-  const meses=groupBy(rows,r=>getMonthKey(r[colFecha]));
-  const ml=Object.keys(meses).slice(-10);
-  mkChart('chartMensajeriaMensual',{
-    type:'bar',
-    data:{labels:ml,datasets:[{data:ml.map(k=>meses[k]),backgroundColor:C_GREEN+'cc',borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}
-  });
+  const mMes=groupBy(rows,r=>mesKeyDate(r[c.fecha]||''));
+  const ml=sortedMeses(mMes).slice(-12);
+  mkCh('ch-msg-mes',{type:'bar',data:{labels:ml,datasets:[{data:ml.map(k=>mMes[k]),backgroundColor:CGR+'cc',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}});
 
-  // Treemap (CSS grid)
-  const top12 = topN(groupBy(rows,r=>r[colDest]||'Sin dato'),12);
-  const maxV = top12[0]?.[1]||1;
-  const colors = PALETTE;
-  const container = document.getElementById('treemapContainer');
-  container.style.gridTemplateColumns = 'repeat(4, 1fr)';
-  container.style.gridTemplateRows = 'repeat(3, 1fr)';
-  container.innerHTML = top12.map(([label,val],i)=>`
-    <div class="treemap-cell" style="background:${colors[i%colors.length]};opacity:${0.6+0.4*(val/maxV)}" title="${label}: ${fmt(val)}">
-      <span>${label.length>20?label.substring(0,18)+'…':label}</span>
-      <small>${fmt(val)}</small>
-    </div>`).join('');
+  // Por mensajero
+  const mensRank=topN(groupBy(rows,r=>(r[c.mensajero]||'Sin dato').trim()),8);
+  renderPL('msg-mensajero',mensRank,'bl');
+
+  // Estado donut
+  const estados=topN(groupBy(rows,r=>(r[c.estado]||'Sin dato').trim()),6);
+  const eColors=estados.map((e,i)=>{const v=e[0].toLowerCase();return v.includes('entregado')||v.includes('ok')||v.includes('cerrado')?CGR:v.includes('pendiente')||v.includes('proceso')?CAM:v.includes('cancel')?CRD:PAL[i%PAL.length];});
+  mkCh('ch-msg-estado',{type:'doughnut',data:{labels:estados.map(e=>e[0]),datasets:[{data:estados.map(e=>e[1]),backgroundColor:eColors,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});
+  document.getElementById('msg-estado-leg').innerHTML=estados.map((e,i)=>`<div class="di"><div class="dd" style="background:${eColors[i]}"></div><span>${e[0]}</span><span class="dv">${fmt(e[1])}</span></div>`).join('');
 
   // Tabla
-  document.getElementById('tbodyMensajeria').innerHTML = rows.slice(-10).reverse().map((r,i)=>`
+  document.getElementById('tb-msg').innerHTML=rows.slice(-15).reverse().map((r,i)=>`
     <tr>
       <td>${i+1}</td>
-      <td>${r[colFecha]||'–'}</td>
-      <td>${r[colRemit]||'–'}</td>
-      <td>${r[colDest]||'–'}</td>
-      <td>${r[colMensaj]||'–'}</td>
-      <td>${getEstadoBadge(r[colEstado])}</td>
+      <td>${r[c.fecha]||'–'}</td>
+      <td>${r[c.remit]||'–'}</td>
+      <td>${r[c.destino]||'–'}</td>
+      <td>${r[c.mensajero]||'–'}</td>
+      <td>${badgeEstado(r[c.estado])}</td>
     </tr>`).join('');
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════
-function getEstadoBadge(val) {
-  const v = (val||'').toLowerCase();
-  if (v.includes('entregado')||v.includes('cumple')||v.includes('ok')||v.includes('puntual')||v.includes('a tiempo'))
-    return `<span class="badge green"><i class="fa-solid fa-check"></i> ${val||'OK'}</span>`;
-  if (v.includes('pendiente')||v.includes('proceso'))
-    return `<span class="badge amber"><i class="fa-solid fa-clock"></i> ${val||'Pendiente'}</span>`;
-  if (v.includes('no')||v.includes('tarde')||v.includes('demora')||v.includes('incumple'))
-    return `<span class="badge red"><i class="fa-solid fa-times"></i> ${val||'No cumple'}</span>`;
-  return `<span class="badge blue">${val||'–'}</span>`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════════════════════════════
-loadAllData();
+// ═══════════════════════════════════
+loadAll();
 </script>
 </body>
 </html>
