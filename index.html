@@ -610,11 +610,11 @@ const BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDM
 // Sheet GIDs — first sheet is gid=0, rest discovered by name via published URL
 // User should verify GIDs if sheets don't load (check URL when publishing individual sheets)
 const SHEETS=[
-  {key:'rad',   gid:'0',          label:'Radicaciones'},
-  {key:'inm',   gid:'1883232562', label:'Inmediatos'},
-  {key:'ll',    gid:'1704987644', label:'Llegada'},
-  {key:'nc',    gid:'1543256289', label:'No Conformidades'},
-  {key:'msg',   gid:'822426700',  label:'Mensajería'},
+  {key:'rad',   gid:'473462036',  label:'Radicaciones'},
+  {key:'inm',   gid:'327293988',  label:'Inmediatos'},
+  {key:'ll',    gid:'639011776',  label:'Informe de Llegada'},
+  {key:'nc',    gid:'1126225091', label:'No Conformidades'},
+  {key:'msg',   gid:'1868863538', label:'Mensajería'},
 ];
 
 const RAW={rad:[],inm:[],ll:[],nc:[],msg:[]};
@@ -756,11 +756,9 @@ function populateSelect(selId,values,sort=true){
 // ═══════════════════════════════════
 async function loadSheet(gid){
   return new Promise(res=>{
-    const url=gid==='0'?BASE:`${BASE.replace('output=csv','')}&gid=${gid}&single=true&output=csv`.replace('pub?','pub?');
-    // Build correct URL
-    const baseClean='https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub';
-    const finalUrl=gid==='0'?baseClean+'?output=csv':baseClean+`?gid=${gid}&single=true&output=csv`;
-    Papa.parse(finalUrl,{download:true,header:true,skipEmptyLines:true,
+    const base='https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub';
+    const url=base+'?gid='+gid+'&single=true&output=csv';
+    Papa.parse(url,{download:true,header:true,skipEmptyLines:true,
       complete:r=>res(r.data),error:()=>res([])});
   });
 }
