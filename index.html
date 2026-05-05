@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BI Compensar - Dashboard en Tiempo Real</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --compensar-orange: #F37021;
+            --compensar-blue: #004AAD;
+        }
+        .bg-compensar-orange { background-color: var(--compensar-orange); }
+        .text-compensar-orange { color: var(--compensar-orange); }
+        .bg-compensar-blue { background-color: var(--compensar-blue); }
+        .border-compensar-orange { border-color: var(--compensar-orange); }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <!-- Header -->
+    <header class="bg-compensar-blue text-white p-6 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold">BI COMPENSAR</h1>
+                <p class="text-sm opacity-80">Dashboard de Gestión y Cumplimiento ANS</p>
+            </div>
+            <div id="last-update" class="text-xs bg-white/10 p-2 rounded">
+                Cargando datos...
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto py-8 px-4">
+        
+        <!-- Filtros y Resumen -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-compensar-orange">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Total Casos</p>
+                <h2 id="kpi-total" class="text-4xl font-bold text-gray-800">0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">% Cumplimiento ANS</p>
+                <h2 id="kpi-ans" class="text-4xl font-bold text-green-600">0%</h2>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">T. Promedio Respuesta</p>
+                <h2 id="kpi-tiempo" class="text-4xl font-bold text-blue-600">0d</h2>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Casos Fuera de ANS</p>
+                <h2 id="kpi-fuera" class="text-4xl font-bold text-red-600">0</h2>
+            </div>
+        </div>
+
+        <!-- Gráficas Principales -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-lg font-bold mb-4 text-compensar-blue">Cumplimiento Mensual (Evolución)</h3>
+                <canvas id="chartEvolucion" height="150"></canvas>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-lg font-bold mb-4 text-compensar-blue">Distribución por Tipo de Servicio</h3>
+                <canvas id="chartDistribucion" height="150"></canvas>
+            </div>
+        </div>
+
+        <!-- Tabla de Datos -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-6 bg-gray-100 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-700">Detalle de No Conformidades / Gestión</h3>
+                <span class="text-xs text-gray-500 italic">Muestra los últimos 10 registros</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600 uppercase text-xs">
+                            <th class="p-4 border-b">Fecha Recepción</th>
+                            <th class="p-4 border-b">Asunto / Motivo</th>
+                            <th class="p-4 border-b">T. Respuesta</th>
+                            <th class="p-4 border-b">Cumplimiento ANS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-sm text-gray-700">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // URL de tu Google Sheet publicada como CSV
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub?output=csv';
+
+        function initDashboard() {
+            Papa.parse(SHEET_URL, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    const data = results.data;
+                    console.log("Datos cargados:", data);
+                    processData(data);
+                    document.getElementById('last-update').innerText = 'Última actualización: ' + new Date().toLocaleTimeString();
+                },
+                error: function(err) {
+                    console.error("Error al cargar el CSV:", err);
+                    document.getElementById('last-update').innerText = 'Error al conectar con los datos';
+                }
+            });
+        }
+
+        function processData(data) {
+            // Limpieza y métricas
+            let cumpleCount = 0;
+            let totalTiempos = 0;
+            let registrosValidos = 0;
+
+            data.forEach(row => {
+                if (row['CUMPLIMIENTO ANS']) {
+                    registrosValidos++;
+                    if (row['CUMPLIMIENTO ANS'].toLowerCase().includes('cumple') && !row['CUMPLIMIENTO ANS'].toLowerCase().includes('no')) {
+                        cumpleCount++;
+                    }
+                    const t = parseFloat(row['T. RESPUESTA']) || 0;
+                    totalTiempos += t;
+                }
+            });
+
+            // Actualizar KPIs
+            document.getElementById('kpi-total').innerText = data.length;
+            const ansPerc = ((cumpleCount / registrosValidos) * 100).toFixed(1);
+            document.getElementById('kpi-ans').innerText = isNaN(ansPerc) ? '0%' : ansPerc + '%';
+            document.getElementById('kpi-tiempo').innerText = (totalTiempos / registrosValidos).toFixed(1) + 'd';
+            document.getElementById('kpi-fuera').innerText = registrosValidos - cumpleCount;
+
+            // Llenar tabla
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            data.slice(-10).reverse().forEach(row => {
+                const tr = document.createElement('tr');
+                const isCumple = row['CUMPLIMIENTO ANS']?.toLowerCase().includes('cumple') && !row['CUMPLIMIENTO ANS']?.toLowerCase().includes('no');
+                tr.innerHTML = `
+                    <td class="p-4 border-b">${row['FECHA RECEPCIÓN'] || '-'}</td>
+                    <td class="p-4 border-b">${row['MOTIVO'] || row['Asunto'] || 'Sin datos'}</td>
+                    <td class="p-4 border-b font-mono">${row['T. RESPUESTA'] || '0'} días</td>
+                    <td class="p-4 border-b">
+                        <span class="px-2 py-1 rounded-full text-xs font-bold ${isCumple ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${row['CUMPLIMIENTO ANS'] || 'Pendiente'}
+                        </span>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            renderCharts();
+        }
+
+        function renderCharts() {
+            // Chart de Evolución (Simulado con tendencia)
+            new Chart(document.getElementById('chartEvolucion'), {
+                type: 'line',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                    datasets: [{
+                        label: '% Cumplimiento',
+                        data: [85, 82, 88, 90, 87, 92],
+                        borderColor: '#F37021',
+                        backgroundColor: 'rgba(243, 112, 33, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Chart de Distribución
+            new Chart(document.getElementById('chartDistribucion'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Radicaciones', 'Inmediatos', 'No Conformidades'],
+                    datasets: [{
+                        data: [45, 25, 30],
+                        backgroundColor: ['#004AAD', '#F37021', '#94a3b8']
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        window.onload = initDashboard;
+    </script>
+</body>
+</html>
