@@ -1332,6 +1332,7 @@ function msgCols(rows){
     tipoSrv:   find(['TIPO DE SERVICIO','TIPO SERVICIO','TIPO_SERVICIO','TIPO','SERVICIO','CLASE']),
     lat:       find(['LATITUD','latitud','LAT','lat','LATITUDE']),
     lng:       find(['LONGITUD','longitud','LNG','lng','LON','lon','LONGITUDE']),
+    ciudad:    find(['CIUDAD','ciudad','CITY','city','MUNICIPIO','municipio']),
   };
 }
 
@@ -1419,70 +1420,137 @@ function renderMsg(){
   renderMsgMap(rows, c);
 }
 
+// Diccionario de ciudades colombianas (y principales ciudades de la región)
+const CIUDADES_CO={
+  'bogota':[4.7110,-74.0721],'bogotá':[4.7110,-74.0721],'medellin':[6.2518,-75.5636],
+  'medellín':[6.2518,-75.5636],'cali':[3.4516,-76.5320],'barranquilla':[10.9685,-74.7813],
+  'cartagena':[10.3910,-75.4794],'cucuta':[7.8939,-72.5078],'cúcuta':[7.8939,-72.5078],
+  'bucaramanga':[7.1193,-73.1227],'pereira':[4.8133,-75.6961],'santa marta':[11.2408,-74.2110],
+  'ibague':[4.4389,-75.2322],'ibagué':[4.4389,-75.2322],'manizales':[5.0703,-75.5138],
+  'villavicencio':[4.1420,-73.6266],'pasto':[1.2136,-77.2811],'monteria':[8.7575,-75.8814],
+  'montería':[8.7575,-75.8814],'valledupar':[10.4761,-73.2506],'neiva':[2.9273,-75.2819],
+  'armenia':[4.5339,-75.6811],'sincelejo':[9.3047,-75.3978],'popayan':[2.4448,-76.6147],
+  'popayán':[2.4448,-76.6147],'tunja':[5.5353,-73.3678],'florencia':[1.6144,-75.6062],
+  'quibdo':[5.6919,-76.6583],'quibdó':[5.6919,-76.6583],'riohacha':[11.5444,-72.9072],
+  'san andres':[12.5847,-81.7006],'san andrés':[12.5847,-81.7006],'leticia':[-4.2153,-69.9406],
+  'mocoa':[1.1519,-76.6487],'mitu':[1.1980,-70.1737],'mitú':[1.1980,-70.1737],
+  'puerto inirida':[3.8653,-67.9239],'yopal':[5.3378,-72.3959],'arauca':[7.0900,-70.7619],
+  'saravena':[6.9563,-71.8648],'aguachica':[8.3083,-73.6180],'barrancabermeja':[7.0652,-73.8547],
+  'buenaventura':[3.8801,-77.0311],'buga':[3.9003,-76.2982],'cartago':[4.7456,-75.9120],
+  'duitama':[5.8221,-73.0277],'facatativa':[4.8143,-74.3548],'fusagasuga':[4.3372,-74.3641],
+  'fusagasugá':[4.3372,-74.3641],'girardot':[4.3061,-74.8048],'ipiales':[0.8294,-77.6441],
+  'lorica':[9.2382,-75.8143],'maicao':[11.3836,-72.2428],'palmira':[3.5394,-76.3036],
+  'rionegro':[6.1549,-75.3735],'sogamoso':[5.7148,-72.9341],'soledad':[10.9177,-74.7674],
+  'soacha':[4.5793,-74.2132],'tulua':[4.0847,-76.1983],'tuluá':[4.0847,-76.1983],
+  'tumaco':[1.7988,-78.7690],'turbo':[8.0980,-76.7287],'zipaquira':[5.0231,-74.0059],
+  'zipaquirá':[5.0231,-74.0059],'girón':[7.0702,-73.1677],'giron':[7.0702,-73.1677],
+  'envigado':[6.1749,-75.5909],'bello':[6.3368,-75.5577],'itagui':[6.1847,-75.5993],
+  'itagüi':[6.1847,-75.5993],'sabaneta':[6.1516,-75.6183],'chia':[4.8607,-74.0588],
+  'chía':[4.8607,-74.0588],'cajica':[4.9192,-74.0272],'cajicá':[4.9192,-74.0272],
+  'la calera':[4.7211,-73.9699],'madrid':[4.7334,-74.2641],'mosquera':[4.7068,-74.2313],
+  'funza':[4.7161,-74.2135],'tocancipa':[4.9686,-73.9151],'tocancipá':[4.9686,-73.9151],
+};
+
+function normCity(s){return(s||'').toLowerCase().trim().replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i').replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/[^a-z0-9 ]/g,'');}
+
 let _msgMap=null;
 function renderMsgMap(rows,c){
   const el=document.getElementById('msg-map');
   if(!el)return;
 
-  // Recopilar puntos con coordenadas válidas — [lat, lng, intensidad]
-  const heatPts=[];
-  const allPts=[];
+  // Construir conteo por ciudad
+  const ciudadCount={};
   rows.forEach(r=>{
+    // Prioridad 1: campo Ciudad
+    const rawCiudad=(r[c.ciudad]||'').trim();
+    if(rawCiudad){
+      const k=normCity(rawCiudad);
+      ciudadCount[k]=(ciudadCount[k]||{count:0,label:rawCiudad});
+      ciudadCount[k].count++;
+      return;
+    }
+    // Prioridad 2: coordenadas directas (lat/lng en datos)
     const lat=parseFloat((r[c.lat]||'').toString().replace(',','.'));
     const lng=parseFloat((r[c.lng]||'').toString().replace(',','.'));
     if(!isNaN(lat)&&!isNaN(lng)&&lat!==0&&lng!==0){
-      heatPts.push([lat,lng,1]);
-      allPts.push([lat,lng]);
+      const k='_coord_'+lat.toFixed(3)+'_'+lng.toFixed(3);
+      ciudadCount[k]=(ciudadCount[k]||{count:0,label:'',lat,lng});
+      ciudadCount[k].count++;
     }
   });
 
-  // Sin coordenadas → mensaje
+  // Resolver coordenadas para cada ciudad
+  const heatPts=[];
+  const allPts=[];
+  const sinGeo=[];
+  Object.entries(ciudadCount).forEach(([k,obj])=>{
+    let lat,lng;
+    if(k.startsWith('_coord_')){
+      lat=obj.lat; lng=obj.lng;
+    } else {
+      // Buscar en diccionario (exacto, luego parcial)
+      const geo=CIUDADES_CO[k]||CIUDADES_CO[Object.keys(CIUDADES_CO).find(ck=>k.includes(ck)||ck.includes(k))];
+      if(geo){lat=geo[0];lng=geo[1];}
+    }
+    if(lat&&lng){
+      // Peso proporcional al conteo de servicios
+      const peso=Math.min(obj.count/5,1);
+      for(let i=0;i<obj.count;i++) heatPts.push([lat,lng,peso]);
+      allPts.push([lat,lng]);
+    } else if(obj.label){
+      sinGeo.push(obj.label);
+    }
+  });
+
+  // Vista por defecto = Colombia si no hay datos suficientes
+  const COLOMBIA_CENTER=[4.5709,-74.2973];
+  const COLOMBIA_ZOOM=6;
+
   if(!heatPts.length){
-    el.style.background='#f1f5f9';
-    el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;flex-direction:column;gap:8px"><i class="fa-solid fa-map-location-dot" style="font-size:32px;opacity:.4"></i><span>No se encontraron coordenadas (lat/lng) en los datos</span></div>';
+    // Inicializar mapa con vista Colombia aunque no haya datos geocodificados
+    if(_msgMap){try{_msgMap.remove();}catch(e){} _msgMap=null;}
+    el.innerHTML=''; el.style.background='#1a1a2e';
+    _msgMap=L.map(el,{zoomControl:true,scrollWheelZoom:true})
+      .setView(COLOMBIA_CENTER,COLOMBIA_ZOOM);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+      attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
+    }).addTo(_msgMap);
+    // Overlay con ciudades sin geocodificar
+    const msg=sinGeo.length?`Ciudades no reconocidas: ${sinGeo.slice(0,6).join(', ')}${sinGeo.length>6?'…':''}`:'No se encontraron ciudades en los datos';
+    L.control.attribution({prefix:msg}).addTo(_msgMap);
     return;
   }
 
   // Destruir mapa previo
   if(_msgMap){try{_msgMap.remove();}catch(e){} _msgMap=null;}
-  el.innerHTML='';
-  el.style.background='#1a1a2e';
+  el.innerHTML=''; el.style.background='#1a1a2e';
 
-  // Centro = promedio de coordenadas
-  const cLat=allPts.reduce((s,p)=>s+p[0],0)/allPts.length;
-  const cLng=allPts.reduce((s,p)=>s+p[1],0)/allPts.length;
+  _msgMap=L.map(el,{zoomControl:true,scrollWheelZoom:true})
+    .setView(COLOMBIA_CENTER,COLOMBIA_ZOOM);
 
-  _msgMap=L.map(el,{zoomControl:true,scrollWheelZoom:true,attributionControl:true})
-    .setView([cLat,cLng],12);
-
-  // Tile oscuro (CartoDB Dark Matter) — resalta mejor el heatmap
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© OpenStreetMap © CARTO',
-    subdomains:'abcd',
-    maxZoom:19
+    attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
   }).addTo(_msgMap);
 
-  // Mapa de calor con leaflet.heat
+  // Capa de calor
   L.heatLayer(heatPts,{
-    radius:28,
-    blur:20,
-    maxZoom:17,
-    max:1,
-    gradient:{
-      0.0:'#0000ff',
-      0.2:'#00aaff',
-      0.4:'#00ffaa',
-      0.6:'#ffff00',
-      0.8:'#ff7700',
-      1.0:'#ff0000'
-    }
+    radius:35,
+    blur:25,
+    maxZoom:18,
+    gradient:{0.0:'#001f6e',0.25:'#0066cc',0.5:'#00ccaa',0.7:'#ffdd00',0.85:'#ff7700',1.0:'#ff0000'}
   }).addTo(_msgMap);
 
-  // Ajustar zoom para ver todos los puntos
+  // Ajustar vista: si tenemos datos en varias ciudades → fitBounds, si es 1 ciudad → zoom 11
   try{
-    const bounds=L.latLngBounds(allPts);
-    _msgMap.fitBounds(bounds,{padding:[24,24]});
-  }catch(e){}
+    if(allPts.length===1){
+      _msgMap.setView(allPts[0],11);
+    } else {
+      const bounds=L.latLngBounds(allPts);
+      // Incluir Colombia completa si los datos son locales (bounds pequeño)
+      const colBounds=L.latLngBounds([[-4.2,-81.7],[13.4,-66.8]]);
+      _msgMap.fitBounds(bounds.extend(colBounds),{padding:[10,10],maxZoom:14});
+    }
+  }catch(e){_msgMap.setView(COLOMBIA_CENTER,COLOMBIA_ZOOM);}
 }
 
 // ═══════════════════════════════════
