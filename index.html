@@ -3,11 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard ANS - Compensar</title>
+  <title>Dashboard Integral BI Compensar V2</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
   <script>
     tailwind.config = {
@@ -16,323 +20,549 @@
           colors: {
             compensarOrange: "#F37021",
             compensarBlue: "#004AAD",
-            compensarBg: "#F8FAFC"
+            compensarBg: "#F1F5F9"
+          },
+          fontFamily: {
+            poppins: ["Poppins", "sans-serif"],
+            lato: ["Lato", "sans-serif"]
           }
         }
       }
     };
   </script>
-</head>
-
-<body class="bg-compensarBg text-slate-800 min-h-screen">
-  <header class="bg-compensarBlue text-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-bold">Dashboard de No Conformidades y ANS</h1>
-        <p class="text-sm text-blue-100">Seguimiento dinámico de cumplimiento, tiempos y volumen de servicios</p>
-      </div>
-      <button id="reloadBtn" class="bg-compensarOrange hover:opacity-90 transition rounded-xl px-5 py-2 font-semibold">
-        Recargar datos
-      </button>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-4 py-6">
-    <section id="alertBox" class="hidden mb-5 rounded-xl border-l-4 border-compensarOrange bg-orange-50 p-4 text-sm text-orange-900"></section>
-
-    <section id="loadingBox" class="mb-5 rounded-xl bg-white shadow p-5">
-      <p class="font-semibold text-compensarBlue">Cargando datos desde el CSV público...</p>
-      <p class="text-sm text-slate-500 mt-1">Los cálculos se generarán automáticamente al finalizar la carga.</p>
-    </section>
-
-    <nav class="bg-white rounded-2xl shadow p-2 mb-6 overflow-x-auto">
-      <div class="flex gap-2 min-w-max">
-        <button class="tab-btn active-tab" data-tab="tab-dashboard">Resumen Ejecutivo</button>
-        <button class="tab-btn" data-tab="tab-nc">No Conformidades</button>
-        <button class="tab-btn" data-tab="tab-respuesta">ANS Respuesta</button>
-        <button class="tab-btn" data-tab="tab-plan">ANS Plan de Acción</button>
-        <button class="tab-btn" data-tab="tab-servicios">Servicios / Áreas</button>
-      </div>
-    </nav>
-
-    <section id="tab-dashboard" class="tab-panel">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-        <article class="kpi-card">
-          <p class="kpi-label">% Cumplimiento ANS Global</p>
-          <h2 id="kpiCumplimiento" class="kpi-value text-compensarBlue">0%</h2>
-          <p class="text-xs text-slate-500 mt-2">Basado estrictamente en la columna CUMPLIMIENTO ANS = “Cumple”.</p>
-        </article>
-
-        <article class="kpi-card">
-          <p class="kpi-label">Tiempo Promedio de Respuesta</p>
-          <h2 id="kpiTiempoRespuesta" class="kpi-value text-compensarOrange">0</h2>
-          <p class="text-xs text-slate-500 mt-2">Días hábiles entre FECHA RECEPCIÓN y FECHA RESPUESTA.</p>
-        </article>
-
-        <article class="kpi-card">
-          <p class="kpi-label">Total Reclamaciones Abiertas</p>
-          <h2 id="kpiAbiertas" class="kpi-value text-compensarBlue">0</h2>
-          <p class="text-xs text-slate-500 mt-2">Según estado abierto o casos sin fecha de respuesta.</p>
-        </article>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <article class="chart-card">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="section-title">Evolución mensual del cumplimiento ANS</h3>
-            <span class="badge-blue">Mensual</span>
-          </div>
-          <div class="h-80">
-            <canvas id="lineChart"></canvas>
-          </div>
-        </article>
-
-        <article class="chart-card">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="section-title">Volumen de servicios entre áreas</h3>
-            <span class="badge-orange">Top 5</span>
-          </div>
-          <div class="h-80">
-            <canvas id="barChart"></canvas>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section id="tab-nc" class="tab-panel hidden">
-      <article class="bg-white rounded-2xl shadow p-5">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
-          <div>
-            <h3 class="section-title">Detalle de No Conformidades</h3>
-            <p class="text-sm text-slate-500">Filas verdes: Cumple. Filas rojas: No Cumple.</p>
-          </div>
-          <input id="searchInput" type="search" placeholder="Buscar caso, área, servicio..."
-            class="w-full md:w-80 rounded-xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-compensarBlue" />
-        </div>
-
-        <div class="overflow-x-auto rounded-xl border border-slate-200">
-          <table class="min-w-full text-sm">
-            <thead class="bg-compensarBlue text-white">
-              <tr>
-                <th class="table-th">#</th>
-                <th class="table-th">Fecha Recepción</th>
-                <th class="table-th">Fecha Respuesta</th>
-                <th class="table-th">Fecha Plan Acción</th>
-                <th class="table-th">Cumplimiento ANS</th>
-                <th class="table-th">Área / Servicio</th>
-                <th class="table-th">Estado</th>
-              </tr>
-            </thead>
-            <tbody id="detailTableBody" class="divide-y divide-slate-200"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section id="tab-respuesta" class="tab-panel hidden">
-      <article class="bg-white rounded-2xl shadow p-5">
-        <h3 class="section-title mb-3">ANS Respuesta</h3>
-        <p class="text-slate-600 mb-4">
-          Regla de negocio: el ANS de respuesta corresponde a <strong>1 día hábil</strong>,
-          calculado entre <strong>FECHA RECEPCIÓN</strong> y <strong>FECHA RESPUESTA</strong>.
-          El cumplimiento oficial se contabiliza desde <strong>CUMPLIMIENTO ANS = “Cumple”</strong>.
-        </p>
-        <div id="respuestaStats" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-      </article>
-    </section>
-
-    <section id="tab-plan" class="tab-panel hidden">
-      <article class="bg-white rounded-2xl shadow p-5">
-        <h3 class="section-title mb-3">ANS Plan de Acción</h3>
-        <p class="text-slate-600 mb-4">
-          Regla de negocio: el ANS del plan de acción corresponde a <strong>3 días hábiles</strong>,
-          calculado entre <strong>FECHA RECEPCIÓN</strong> y <strong>FECHA PLAN DE ACCION</strong>.
-          El cumplimiento oficial se contabiliza desde <strong>CUMPLIMIENTO ANS = “Cumple”</strong>.
-        </p>
-        <div id="planStats" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-      </article>
-    </section>
-
-    <section id="tab-servicios" class="tab-panel hidden">
-      <article class="bg-white rounded-2xl shadow p-5">
-        <h3 class="section-title mb-3">Comparativa de volumen de servicios / áreas</h3>
-        <p class="text-slate-600 mb-4">
-          La gráfica usa la columna ÁREA, SERVICIO, ÁREA RESPONSABLE o una equivalente encontrada en el CSV.
-        </p>
-        <div id="areasList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-      </article>
-    </section>
-  </main>
 
   <style>
+    body {
+      font-family: "Lato", sans-serif;
+    }
+
+    .title-font {
+      font-family: "Poppins", sans-serif;
+    }
+
     .tab-btn {
-      padding: 0.7rem 1rem;
-      border-radius: 0.9rem;
-      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border-radius: 1rem;
+      font-weight: 800;
       color: #004AAD;
       transition: all 0.2s ease;
-      white-space: nowrap;
+      text-align: left;
     }
 
     .tab-btn:hover {
       background: #eef4ff;
+      transform: translateX(2px);
     }
 
-    .active-tab {
+    .tab-btn.active {
       background: #004AAD;
-      color: white;
+      color: #ffffff;
+      box-shadow: 0 10px 20px rgba(0, 74, 173, 0.22);
     }
 
-    .kpi-card,
-    .chart-card {
-      background: white;
-      border-radius: 1.25rem;
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    .kpi-card {
+      background: #ffffff;
+      border-radius: 1.4rem;
       padding: 1.25rem;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(226, 232, 240, 0.9);
     }
 
-    .kpi-label {
-      font-size: 0.85rem;
-      color: #64748b;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
+    .panel-card {
+      background: #ffffff;
+      border-radius: 1.4rem;
+      padding: 1.25rem;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(226, 232, 240, 0.9);
     }
 
-    .kpi-value {
-      font-size: 2.4rem;
-      line-height: 1.1;
-      font-weight: 900;
-      margin-top: 0.5rem;
+    .home-link-card {
+      background: #ffffff;
+      border-radius: 1.4rem;
+      padding: 1.2rem;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      transition: all 0.2s ease;
+      cursor: pointer;
     }
 
-    .section-title {
-      color: #004AAD;
-      font-weight: 900;
-      font-size: 1.15rem;
+    .home-link-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+      border-color: rgba(243, 112, 33, 0.45);
     }
 
-    .badge-blue {
-      background: #eaf1ff;
-      color: #004AAD;
-      font-size: 0.75rem;
-      font-weight: 800;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
-    }
-
-    .badge-orange {
-      background: #fff2eb;
-      color: #F37021;
-      font-size: 0.75rem;
-      font-weight: 800;
-      padding: 0.35rem 0.7rem;
-      border-radius: 999px;
+    .chart-box {
+      height: 320px;
+      position: relative;
     }
 
     .table-th {
-      padding: 0.8rem;
+      padding: 0.85rem;
       text-align: left;
-      font-weight: 800;
+      font-weight: 900;
       white-space: nowrap;
+      font-size: 0.78rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
     .table-td {
-      padding: 0.75rem;
+      padding: 0.85rem;
       vertical-align: top;
+      font-size: 0.9rem;
+    }
+
+    .soft-badge-blue {
+      background: #eaf1ff;
+      color: #004AAD;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 900;
+    }
+
+    .soft-badge-orange {
+      background: #fff1e9;
+      color: #F37021;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 900;
     }
   </style>
+</head>
+
+<body class="bg-compensarBg text-slate-800">
+  <div class="min-h-screen lg:flex">
+    <aside class="lg:w-80 bg-white border-r border-slate-200 lg:min-h-screen lg:sticky lg:top-0">
+      <div class="p-5 border-b border-slate-200">
+        <div class="flex items-center gap-3">
+          <div class="h-12 w-12 rounded-2xl bg-compensarOrange text-white flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-chart-line text-xl"></i>
+          </div>
+          <div>
+            <h1 class="title-font text-xl font-black text-compensarBlue">BI Compensar</h1>
+            <p class="text-xs text-slate-500 font-bold">Dashboard Integral V2</p>
+          </div>
+        </div>
+      </div>
+
+      <nav class="p-4 space-y-2">
+        <button class="tab-btn active" data-target="home">
+          <i class="fa-solid fa-house"></i> HOME
+        </button>
+        <button class="tab-btn" data-target="radicaciones">
+          <i class="fa-solid fa-folder-open"></i> Radicaciones
+        </button>
+        <button class="tab-btn" data-target="inmediatos">
+          <i class="fa-solid fa-bolt"></i> Inmediatos
+        </button>
+        <button class="tab-btn" data-target="llegada">
+          <i class="fa-solid fa-user-clock"></i> Informe de Llegada
+        </button>
+        <button class="tab-btn" data-target="noconformidades">
+          <i class="fa-solid fa-triangle-exclamation"></i> No Conformidades
+        </button>
+        <button class="tab-btn" data-target="mensajeria">
+          <i class="fa-solid fa-route"></i> Mensajería
+        </button>
+      </nav>
+
+      <div class="p-4">
+        <button id="reloadBtn" class="w-full bg-compensarOrange hover:opacity-90 text-white rounded-2xl px-4 py-3 font-black shadow-lg transition">
+          <i class="fa-solid fa-rotate-right mr-2"></i>Actualizar datos
+        </button>
+        <p id="lastUpdate" class="text-xs text-slate-500 mt-3 text-center">Sin actualización</p>
+      </div>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-6 lg:p-8">
+      <section id="alertBox" class="hidden mb-5 rounded-2xl border-l-4 border-compensarOrange bg-orange-50 p-4 text-orange-900 shadow-sm"></section>
+
+      <section id="loadingBox" class="mb-5 panel-card">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-full border-4 border-slate-200 border-t-compensarOrange animate-spin"></div>
+          <div>
+            <p class="font-black text-compensarBlue">Cargando datos en tiempo real...</p>
+            <p class="text-sm text-slate-500">Conexión vía PapaParse al CSV público de Compensar.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="home" class="view-section">
+        <div class="mb-6">
+          <h2 class="title-font text-3xl md:text-4xl font-black text-compensarBlue">Panel de Control</h2>
+          <p class="text-slate-500 mt-2">Resumen ejecutivo del flujo operativo y cumplimiento de ANS.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+          <article class="kpi-card">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-wide text-slate-500 font-black">Registros totales</p>
+              <i class="fa-solid fa-database text-compensarBlue"></i>
+            </div>
+            <h3 id="kpiTotal" class="title-font text-4xl font-black text-compensarBlue mt-3">0</h3>
+            <p class="text-sm text-slate-500 mt-2">Registros cargados desde el CSV.</p>
+          </article>
+
+          <article class="kpi-card">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-wide text-slate-500 font-black">Cumplimiento ANS</p>
+              <i class="fa-solid fa-circle-check text-compensarOrange"></i>
+            </div>
+            <h3 id="kpiCumplimiento" class="title-font text-4xl font-black text-compensarOrange mt-3">0%</h3>
+            <p class="text-sm text-slate-500 mt-2">Basado en CUMPLIMIENTO ANS = “Cumple”.</p>
+          </article>
+
+          <article class="kpi-card">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-wide text-slate-500 font-black">Prom. respuesta</p>
+              <i class="fa-solid fa-stopwatch text-compensarBlue"></i>
+            </div>
+            <h3 id="kpiPromRespuesta" class="title-font text-4xl font-black text-compensarBlue mt-3">0</h3>
+            <p class="text-sm text-slate-500 mt-2">Días hábiles entre recepción y respuesta.</p>
+          </article>
+
+          <article class="kpi-card">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-wide text-slate-500 font-black">Abiertas</p>
+              <i class="fa-solid fa-folder-minus text-compensarOrange"></i>
+            </div>
+            <h3 id="kpiAbiertas" class="title-font text-4xl font-black text-compensarOrange mt-3">0</h3>
+            <p class="text-sm text-slate-500 mt-2">Casos abiertos o sin fecha de respuesta.</p>
+          </article>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+          <article class="panel-card xl:col-span-2">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+              <div>
+                <h3 class="title-font text-xl font-black text-compensarBlue">Flujo operativo</h3>
+                <p class="text-sm text-slate-500">Lectura ejecutiva del proceso de punta a punta.</p>
+              </div>
+              <span class="soft-badge-orange">Ventanilla → Cumplimiento</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                <i class="fa-solid fa-inbox text-compensarBlue text-2xl mb-3"></i>
+                <h4 class="font-black text-compensarBlue">Ventanilla</h4>
+                <p class="text-sm text-slate-500 mt-1">Entrada y radicación de documentos.</p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                <i class="fa-solid fa-truck-fast text-compensarOrange text-2xl mb-3"></i>
+                <h4 class="font-black text-compensarBlue">Mensajería</h4>
+                <p class="text-sm text-slate-500 mt-1">Traslado y entregas inmediatas.</p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                <i class="fa-solid fa-clipboard-list text-compensarBlue text-2xl mb-3"></i>
+                <h4 class="font-black text-compensarBlue">Gestión</h4>
+                <p class="text-sm text-slate-500 mt-1">Seguimiento de casos y responsables.</p>
+              </div>
+              <div class="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                <i class="fa-solid fa-shield-halved text-compensarOrange text-2xl mb-3"></i>
+                <h4 class="font-black text-compensarBlue">Cumplimiento</h4>
+                <p class="text-sm text-slate-500 mt-1">Control de ANS y calidad.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <h3 class="title-font text-xl font-black text-compensarBlue mb-4">Estado de calidad</h3>
+            <div class="chart-box">
+              <canvas id="homeDonutChart"></canvas>
+            </div>
+          </article>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
+          <article class="home-link-card" data-go="radicaciones">
+            <i class="fa-solid fa-folder-open text-3xl text-compensarBlue mb-4"></i>
+            <h3 class="title-font font-black text-compensarBlue">Radicaciones</h3>
+            <p class="text-sm text-slate-500 mt-2">Volumen por dependencia y usuario.</p>
+          </article>
+
+          <article class="home-link-card" data-go="inmediatos">
+            <i class="fa-solid fa-bolt text-3xl text-compensarOrange mb-4"></i>
+            <h3 class="title-font font-black text-compensarBlue">Inmediatos</h3>
+            <p class="text-sm text-slate-500 mt-2">Control de entregas urgentes.</p>
+          </article>
+
+          <article class="home-link-card" data-go="llegada">
+            <i class="fa-solid fa-user-clock text-3xl text-compensarBlue mb-4"></i>
+            <h3 class="title-font font-black text-compensarBlue">Llegada</h3>
+            <p class="text-sm text-slate-500 mt-2">Puntualidad del personal.</p>
+          </article>
+
+          <article class="home-link-card" data-go="noconformidades">
+            <i class="fa-solid fa-triangle-exclamation text-3xl text-compensarOrange mb-4"></i>
+            <h3 class="title-font font-black text-compensarBlue">No Conformidades</h3>
+            <p class="text-sm text-slate-500 mt-2">ANS de respuesta y plan de acción.</p>
+          </article>
+
+          <article class="home-link-card" data-go="mensajeria">
+            <i class="fa-solid fa-route text-3xl text-compensarBlue mb-4"></i>
+            <h3 class="title-font font-black text-compensarBlue">Mensajería</h3>
+            <p class="text-sm text-slate-500 mt-2">Destinos y rutas frecuentes.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="radicaciones" class="view-section hidden">
+        <header class="mb-6">
+          <h2 class="title-font text-3xl font-black text-compensarBlue">Radicaciones</h2>
+          <p class="text-slate-500 mt-2">Gestión de ventanilla: carga por dependencia, usuario y trámite.</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <article class="panel-card xl:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="title-font text-xl font-black text-compensarBlue">Trámites por dependencia</h3>
+              <span class="soft-badge-blue">Barras horizontales</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="radicacionesChart"></canvas>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <h3 class="title-font text-xl font-black text-compensarBlue mb-4">Top usuarios</h3>
+            <div id="radicacionesUsuarios" class="space-y-3"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="inmediatos" class="view-section hidden">
+        <header class="mb-6">
+          <h2 class="title-font text-3xl font-black text-compensarBlue">Inmediatos</h2>
+          <p class="text-slate-500 mt-2">Mensajería fija: control de velocidad y entregas a tiempo.</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <article class="panel-card xl:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="title-font text-xl font-black text-compensarBlue">% de entregas a tiempo</h3>
+              <span class="soft-badge-orange">Gauge</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="inmediatosGaugeChart"></canvas>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <h3 class="title-font text-xl font-black text-compensarBlue mb-4">Indicadores</h3>
+            <div id="inmediatosStats" class="space-y-3"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="llegada" class="view-section hidden">
+        <header class="mb-6">
+          <h2 class="title-font text-3xl font-black text-compensarBlue">Informe de Llegada</h2>
+          <p class="text-slate-500 mt-2">Talento Humano: puntualidad del personal en puntos físicos.</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <article class="panel-card xl:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="title-font text-xl font-black text-compensarBlue">Puntualidad vs retrasos</h3>
+              <span class="soft-badge-blue">Donut</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="llegadaDonutChart"></canvas>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <h3 class="title-font text-xl font-black text-compensarBlue mb-4">Resumen</h3>
+            <div id="llegadaStats" class="space-y-3"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="noconformidades" class="view-section hidden">
+        <header class="mb-6">
+          <h2 class="title-font text-3xl font-black text-compensarBlue">No Conformidades</h2>
+          <p class="text-slate-500 mt-2">Calidad: cumplimiento ANS de respuesta y plan de acción.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <article class="kpi-card">
+            <p class="text-xs uppercase tracking-wide text-slate-500 font-black">ANS Respuesta</p>
+            <h3 class="title-font text-3xl font-black text-compensarBlue mt-2">1 día hábil</h3>
+            <p id="ansRespuestaProm" class="text-sm text-slate-500 mt-2">Promedio: 0 días.</p>
+          </article>
+
+          <article class="kpi-card">
+            <p class="text-xs uppercase tracking-wide text-slate-500 font-black">ANS Plan Acción</p>
+            <h3 class="title-font text-3xl font-black text-compensarOrange mt-2">3 días hábiles</h3>
+            <p id="ansPlanProm" class="text-sm text-slate-500 mt-2">Promedio: 0 días.</p>
+          </article>
+
+          <article class="kpi-card">
+            <p class="text-xs uppercase tracking-wide text-slate-500 font-black">Cumplimiento oficial</p>
+            <h3 id="ncCumplimiento" class="title-font text-3xl font-black text-compensarBlue mt-2">0%</h3>
+            <p class="text-sm text-slate-500 mt-2">Calculado desde CUMPLIMIENTO ANS.</p>
+          </article>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+          <article class="panel-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="title-font text-xl font-black text-compensarBlue">Evolución mensual del cumplimiento</h3>
+              <span class="soft-badge-blue">Líneas</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="ncLineChart"></canvas>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="title-font text-xl font-black text-compensarBlue">Volumen mensual de casos</h3>
+              <span class="soft-badge-orange">Mensual</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="ncVolumeChart"></canvas>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel-card">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <div>
+              <h3 class="title-font text-xl font-black text-compensarBlue">Últimos 10 casos</h3>
+              <p class="text-sm text-slate-500">Semaforización: verde Cumple / rojo No Cumple.</p>
+            </div>
+            <input id="ncSearch" type="search" placeholder="Buscar caso, área, estado..."
+              class="w-full md:w-80 rounded-2xl border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-compensarBlue">
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="min-w-full">
+              <thead class="bg-compensarBlue text-white">
+                <tr>
+                  <th class="table-th">Caso</th>
+                  <th class="table-th">Recepción</th>
+                  <th class="table-th">Respuesta</th>
+                  <th class="table-th">Plan Acción</th>
+                  <th class="table-th">Cumplimiento ANS</th>
+                  <th class="table-th">Área / Servicio</th>
+                  <th class="table-th">Estado</th>
+                </tr>
+              </thead>
+              <tbody id="ncTableBody" class="divide-y divide-slate-200"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="mensajeria" class="view-section hidden">
+        <header class="mb-6">
+          <h2 class="title-font text-3xl font-black text-compensarBlue">Mensajería</h2>
+          <p class="text-slate-500 mt-2">Logística general: destinos, rutas y frecuencias mensuales.</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <article class="panel-card xl:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="title-font text-xl font-black text-compensarBlue">Destinos frecuentes</h3>
+              <span class="soft-badge-orange">Barras</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="mensajeriaDestinosChart"></canvas>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <h3 class="title-font text-xl font-black text-compensarBlue mb-4">Top rutas / destinos</h3>
+            <div id="mensajeriaList" class="space-y-3"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS_r3FFKdldIx9BXRmDMHmn-akUNiqrYDzb7nCSWtzmKyltBzq9Dn01eI_-rHbOZHeMditGCscrZ3Pn/pub?output=csv";
 
-    let rawRows = [];
-    let normalizedRows = [];
-    let lineChartInstance = null;
-    let barChartInstance = null;
-
-    const aliases = {
-      fechaRecepcion: [
-        "FECHA RECEPCION",
-        "FECHA RECEPCIÓN",
-        "FECHA DE RECEPCION",
-        "FECHA DE RECEPCIÓN",
-        "F RECEPCION",
-        "F. RECEPCION"
-      ],
-      fechaRespuesta: [
-        "FECHA RESPUESTA",
-        "FECHA DE RESPUESTA",
-        "F RESPUESTA",
-        "F. RESPUESTA"
-      ],
-      fechaPlan: [
-        "FECHA PLAN DE ACCION",
-        "FECHA PLAN DE ACCIÓN",
-        "FECHA PLAN ACCION",
-        "FECHA PLAN ACCIÓN",
-        "FECHA DE PLAN DE ACCION",
-        "FECHA DE PLAN DE ACCIÓN"
-      ],
-      cumplimiento: [
-        "CUMPLIMIENTO ANS",
-        "CUMPLIMIENTO",
-        "ANS",
-        "CUMPLE ANS"
-      ],
-      area: [
-        "AREA",
-        "ÁREA",
-        "AREA RESPONSABLE",
-        "ÁREA RESPONSABLE",
-        "SERVICIO",
-        "SERVICIOS",
-        "PROCESO",
-        "DEPENDENCIA"
-      ],
-      estado: [
-        "ESTADO",
-        "ESTATUS",
-        "STATUS",
-        "SITUACION",
-        "SITUACIÓN"
-      ],
-      caso: [
-        "CASO",
-        "ID",
-        "RADICADO",
-        "NUMERO CASO",
-        "NÚMERO CASO",
-        "NO CONFORMIDAD",
-        "NC"
-      ]
+    const COLORS = {
+      orange: "#F37021",
+      blue: "#004AAD",
+      bg: "#F1F5F9",
+      green: "#16A34A",
+      red: "#DC2626",
+      slate: "#64748B",
+      lightBlue: "rgba(0, 74, 173, 0.12)",
+      lightOrange: "rgba(243, 112, 33, 0.18)"
     };
 
+    const ALIASES = {
+      sheet: ["HOJA", "SHEET", "PESTAÑA", "MODULO", "MÓDULO", "SECCION", "SECCIÓN", "PROCESO", "TIPO", "TIPO REGISTRO", "ORIGEN"],
+      id: ["ID", "CASO", "RADICADO", "NUMERO CASO", "NÚMERO CASO", "NO CONFORMIDAD", "NC", "CONSECUTIVO"],
+      date: ["FECHA", "FECHA REGISTRO", "FECHA RADICACION", "FECHA RADICACIÓN", "FECHA RECEPCION", "FECHA RECEPCIÓN", "FECHA SOLICITUD"],
+      dependencia: ["DEPENDENCIA", "AREA", "ÁREA", "AREA RESPONSABLE", "ÁREA RESPONSABLE", "DIRECCION", "DIRECCIÓN", "UNIDAD"],
+      usuario: ["USUARIO", "FUNCIONARIO", "ASESOR", "RESPONSABLE", "COLABORADOR", "NOMBRE USUARIO", "QUIEN RADICA"],
+      tramite: ["TRAMITE", "TRÁMITE", "TIPO TRAMITE", "TIPO TRÁMITE", "DOCUMENTO", "TIPO DOCUMENTO"],
+      fechaRecepcion: ["FECHA RECEPCION", "FECHA RECEPCIÓN", "FECHA DE RECEPCION", "FECHA DE RECEPCIÓN", "F RECEPCION", "F. RECEPCION"],
+      fechaRespuesta: ["FECHA RESPUESTA", "FECHA DE RESPUESTA", "F RESPUESTA", "F. RESPUESTA"],
+      fechaPlan: ["FECHA PLAN DE ACCION", "FECHA PLAN DE ACCIÓN", "FECHA PLAN ACCION", "FECHA PLAN ACCIÓN", "FECHA DE PLAN DE ACCION", "FECHA DE PLAN DE ACCIÓN"],
+      cumplimientoAns: ["CUMPLIMIENTO ANS", "CUMPLIMIENTO", "ANS", "CUMPLE ANS", "ESTADO ANS"],
+      estado: ["ESTADO", "ESTATUS", "STATUS", "SITUACION", "SITUACIÓN"],
+      solicitud: ["FECHA SOLICITUD", "FECHA RECOGIDA", "FECHA INICIO", "FECHA RECEPCION", "FECHA RECEPCIÓN"],
+      entrega: ["FECHA ENTREGA", "FECHA FINAL", "FECHA CIERRE", "FECHA RESPUESTA"],
+      puntualidad: ["PUNTUALIDAD", "LLEGADA", "ESTADO LLEGADA", "CUMPLIMIENTO LLEGADA", "HORA LLEGADA", "OBSERVACION", "OBSERVACIÓN"],
+      destino: ["DESTINO", "RUTA", "DIRECCION DESTINO", "DIRECCIÓN DESTINO", "SEDE DESTINO", "CIUDAD", "PUNTO DESTINO", "UBICACION", "UBICACIÓN"]
+    };
+
+    const SECTION_KEYWORDS = {
+      radicaciones: ["RADICACION", "RADICACIÓN", "VENTANILLA"],
+      inmediatos: ["INMEDIATO", "INMEDIATOS", "MENSAJERIA FIJA", "MENSAJERÍA FIJA", "URGENTE"],
+      llegada: ["LLEGADA", "TALENTO HUMANO", "PUNTUALIDAD"],
+      noconformidades: ["NO CONFORMIDAD", "NO CONFORMIDADES", "CALIDAD", "ANS"],
+      mensajeria: ["MENSAJERIA", "MENSAJERÍA", "LOGISTICA", "LOGÍSTICA", "RUTA"]
+    };
+
+    let allRows = [];
+    let normalizedRows = [];
+    let charts = {};
+
     document.addEventListener("DOMContentLoaded", () => {
-      setupTabs();
-      setupSearch();
-      document.getElementById("reloadBtn").addEventListener("click", loadCSV);
-      loadCSV();
+      setupNavigation();
+      document.getElementById("reloadBtn").addEventListener("click", loadData);
+      document.getElementById("ncSearch").addEventListener("input", event => {
+        renderNoConformidadesTable(getSectionRows("noconformidades"), event.target.value);
+      });
+      loadData();
     });
 
-    function setupTabs() {
+    function setupNavigation() {
       document.querySelectorAll(".tab-btn").forEach(button => {
-        button.addEventListener("click", () => {
-          document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active-tab"));
-          document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.add("hidden"));
+        button.addEventListener("click", () => showSection(button.dataset.target));
+      });
 
-          button.classList.add("active-tab");
-          document.getElementById(button.dataset.tab).classList.remove("hidden");
-        });
+      document.querySelectorAll("[data-go]").forEach(card => {
+        card.addEventListener("click", () => showSection(card.dataset.go));
       });
     }
 
-    function setupSearch() {
-      const input = document.getElementById("searchInput");
-      input.addEventListener("input", () => renderDetailTable(input.value.trim().toLowerCase()));
+    function showSection(sectionId) {
+      document.querySelectorAll(".view-section").forEach(section => section.classList.add("hidden"));
+      document.querySelectorAll(".tab-btn").forEach(button => button.classList.remove("active"));
+
+      document.getElementById(sectionId).classList.remove("hidden");
+      const activeButton = document.querySelector(`.tab-btn[data-target="${sectionId}"]`);
+      if (activeButton) activeButton.classList.add("active");
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function loadCSV() {
+    function loadData() {
       showLoading(true);
       showAlert("");
 
@@ -341,33 +571,53 @@
         header: true,
         skipEmptyLines: true,
         dynamicTyping: false,
-        complete: function(results) {
-          if (results.errors && results.errors.length > 0) {
-            console.warn("Errores PapaParse:", results.errors);
+        complete: results => {
+          if (results.errors && results.errors.length) {
+            console.warn("Advertencias de PapaParse:", results.errors);
           }
 
-          rawRows = Array.isArray(results.data) ? results.data.filter(row => Object.keys(row).length > 0) : [];
+          allRows = Array.isArray(results.data)
+            ? results.data.filter(row => Object.values(row).some(value => String(value || "").trim() !== ""))
+            : [];
 
-          if (!rawRows.length) {
-            showAlert("No se encontraron registros en el CSV. Verifica que la URL pública esté publicada correctamente.");
+          if (!allRows.length) {
+            showAlert("No se encontraron registros en el CSV. Verifica que la hoja esté publicada como CSV y tenga datos visibles.");
             showLoading(false);
             return;
           }
 
-          normalizedRows = rawRows.map(normalizeRow);
+          normalizedRows = allRows.map(normalizeRow);
+
           buildDashboard();
+
+          document.getElementById("lastUpdate").textContent = `Última actualización: ${new Date().toLocaleString("es-CO")}`;
           showLoading(false);
         },
-        error: function(error) {
+        error: error => {
           console.error(error);
-          showAlert("No fue posible cargar el CSV público. Revisa que la URL esté publicada, que tenga permisos públicos y que no exista bloqueo de red o CORS.");
+          showAlert("No fue posible cargar el CSV público. Revisa permisos de publicación, conexión, disponibilidad del enlace o bloqueo CORS.");
           showLoading(false);
         }
       });
     }
 
-    function normalizeHeader(header) {
-      return String(header || "")
+    function buildDashboard() {
+      const ncRows = getSectionRows("noconformidades");
+      const radRows = getSectionRows("radicaciones");
+      const inmediatosRows = getSectionRows("inmediatos");
+      const llegadaRows = getSectionRows("llegada");
+      const mensajeriaRows = getSectionRows("mensajeria");
+
+      renderHome(ncRows);
+      renderRadicaciones(radRows);
+      renderInmediatos(inmediatosRows);
+      renderLlegada(llegadaRows);
+      renderNoConformidades(ncRows);
+      renderMensajeria(mensajeriaRows);
+    }
+
+    function normalizeHeader(value) {
+      return String(value || "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, " ")
@@ -375,7 +625,7 @@
         .toUpperCase();
     }
 
-    function normalizeText(value) {
+    function normalizeValue(value) {
       return String(value || "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -385,36 +635,59 @@
     }
 
     function normalizeRow(row) {
-      const normalized = {};
-
+      const map = {};
       Object.keys(row).forEach(key => {
-        normalized[normalizeHeader(key)] = row[key];
+        map[normalizeHeader(key)] = row[key];
       });
 
       return {
         original: row,
-        caso: getValue(normalized, aliases.caso) || "",
-        fechaRecepcionRaw: getValue(normalized, aliases.fechaRecepcion) || "",
-        fechaRespuestaRaw: getValue(normalized, aliases.fechaRespuesta) || "",
-        fechaPlanRaw: getValue(normalized, aliases.fechaPlan) || "",
-        cumplimientoRaw: getValue(normalized, aliases.cumplimiento) || "",
-        areaRaw: getValue(normalized, aliases.area) || "Sin área / servicio",
-        estadoRaw: getValue(normalized, aliases.estado) || "",
-        fechaRecepcion: parseDate(getValue(normalized, aliases.fechaRecepcion)),
-        fechaRespuesta: parseDate(getValue(normalized, aliases.fechaRespuesta)),
-        fechaPlan: parseDate(getValue(normalized, aliases.fechaPlan)),
-        normalized
+        map,
+        allText: Object.values(row).join(" ").toUpperCase(),
+        id: getValue(map, ALIASES.id),
+        baseDate: parseDate(getValue(map, ALIASES.date)),
+        dependencia: getValue(map, ALIASES.dependencia) || "Sin dependencia",
+        usuario: getValue(map, ALIASES.usuario) || "Sin usuario",
+        tramite: getValue(map, ALIASES.tramite) || "Sin trámite",
+        fechaRecepcionRaw: getValue(map, ALIASES.fechaRecepcion),
+        fechaRespuestaRaw: getValue(map, ALIASES.fechaRespuesta),
+        fechaPlanRaw: getValue(map, ALIASES.fechaPlan),
+        fechaRecepcion: parseDate(getValue(map, ALIASES.fechaRecepcion)),
+        fechaRespuesta: parseDate(getValue(map, ALIASES.fechaRespuesta)),
+        fechaPlan: parseDate(getValue(map, ALIASES.fechaPlan)),
+        cumplimientoAns: getValue(map, ALIASES.cumplimientoAns),
+        estado: getValue(map, ALIASES.estado),
+        solicitud: parseDate(getValue(map, ALIASES.solicitud)),
+        entrega: parseDate(getValue(map, ALIASES.entrega)),
+        puntualidad: getValue(map, ALIASES.puntualidad),
+        destino: getValue(map, ALIASES.destino) || "Sin destino"
       };
     }
 
-    function getValue(row, possibleNames) {
-      for (const name of possibleNames) {
-        const key = normalizeHeader(name);
-        if (Object.prototype.hasOwnProperty.call(row, key)) {
-          return row[key];
-        }
+    function getValue(map, aliases) {
+      for (const alias of aliases) {
+        const key = normalizeHeader(alias);
+        if (Object.prototype.hasOwnProperty.call(map, key)) return map[key];
       }
       return "";
+    }
+
+    function getSectionRows(sectionKey) {
+      const keywords = SECTION_KEYWORDS[sectionKey] || [];
+      const directRows = normalizedRows.filter(row => {
+        const sheetValue = getValue(row.map, ALIASES.sheet);
+        const normalizedSheet = normalizeValue(sheetValue);
+        return keywords.some(keyword => normalizedSheet.includes(normalizeValue(keyword)));
+      });
+
+      if (directRows.length > 0) return directRows;
+
+      const semanticRows = normalizedRows.filter(row => {
+        const text = normalizeValue(row.allText);
+        return keywords.some(keyword => text.includes(normalizeValue(keyword)));
+      });
+
+      return semanticRows.length > 0 ? semanticRows : normalizedRows;
     }
 
     function parseDate(value) {
@@ -426,16 +699,22 @@
       if (!raw) return null;
 
       const excelSerial = Number(raw);
-      if (!isNaN(excelSerial) && excelSerial > 25000 && excelSerial < 90000) {
+      if (!Number.isNaN(excelSerial) && excelSerial > 25000 && excelSerial < 90000) {
         const excelEpoch = new Date(Date.UTC(1899, 11, 30));
         return new Date(excelEpoch.getTime() + excelSerial * 86400000);
       }
 
-      const cleaned = raw.split(" ")[0].replace(/\./g, "/").replace(/-/g, "/");
-      const parts = cleaned.split("/").map(Number);
+      const clean = raw
+        .replace(/\./g, "/")
+        .replace(/-/g, "/")
+        .replace("T", " ");
 
-      if (parts.length === 3 && parts.every(part => !isNaN(part))) {
-        let day, month, year;
+      const datePart = clean.split(" ")[0];
+      const timePart = clean.split(" ")[1] || "";
+      const parts = datePart.split("/").map(Number);
+
+      if (parts.length === 3 && parts.every(part => !Number.isNaN(part))) {
+        let year, month, day;
 
         if (parts[0] > 1900) {
           year = parts[0];
@@ -449,8 +728,17 @@
 
         if (year < 100) year += 2000;
 
-        const date = new Date(year, month - 1, day);
-        if (!isNaN(date)) return date;
+        let hour = 0;
+        let minute = 0;
+
+        if (timePart) {
+          const timeParts = timePart.split(":").map(Number);
+          hour = Number.isNaN(timeParts[0]) ? 0 : timeParts[0];
+          minute = Number.isNaN(timeParts[1]) ? 0 : timeParts[1];
+        }
+
+        const parsed = new Date(year, month - 1, day, hour, minute);
+        if (!isNaN(parsed)) return parsed;
       }
 
       const fallback = new Date(raw);
@@ -465,60 +753,72 @@
 
       if (end < start) return 0;
 
-      let count = 0;
-      const current = new Date(start);
+      let days = 0;
+      const cursor = new Date(start);
 
-      while (current < end) {
-        current.setDate(current.getDate() + 1);
-        const day = current.getDay();
-
-        if (day !== 0 && day !== 6) {
-          count++;
-        }
+      while (cursor < end) {
+        cursor.setDate(cursor.getDate() + 1);
+        const day = cursor.getDay();
+        if (day !== 0 && day !== 6) days++;
       }
 
-      return count;
+      return days;
     }
 
     function isCumple(row) {
-      return normalizeText(row.cumplimientoRaw) === "CUMPLE";
+      return normalizeValue(row.cumplimientoAns) === "CUMPLE";
     }
 
     function isNoCumple(row) {
-      return normalizeText(row.cumplimientoRaw) === "NO CUMPLE";
+      return normalizeValue(row.cumplimientoAns) === "NO CUMPLE";
     }
 
     function isOpen(row) {
-      const estado = normalizeText(row.estadoRaw);
+      const estado = normalizeValue(row.estado);
+      if (["ABIERTO", "ABIERTA", "PENDIENTE", "EN PROCESO", "SIN CERRAR", "ASIGNADO"].some(x => estado.includes(x))) return true;
+      if (!estado && !row.fechaRespuesta) return true;
+      return false;
+    }
 
-      if (["ABIERTO", "ABIERTA", "EN PROCESO", "PENDIENTE", "SIN CERRAR"].includes(estado)) {
-        return true;
-      }
+    function isOnTime(row) {
+      const text = normalizeValue([row.cumplimientoAns, row.estado, row.puntualidad].join(" "));
 
-      if (!estado && !row.fechaRespuesta) {
-        return true;
-      }
+      if (text.includes("NO CUMPLE") || text.includes("TARDE") || text.includes("RETRAS") || text.includes("FUERA")) return false;
+      if (text.includes("CUMPLE") || text.includes("A TIEMPO") || text.includes("PUNTUAL") || text.includes("OPORTUNO")) return true;
+
+      const days = businessDaysBetween(row.solicitud || row.fechaRecepcion || row.baseDate, row.entrega || row.fechaRespuesta);
+      if (days !== null) return days <= 1;
 
       return false;
     }
 
+    function isLate(row) {
+      const text = normalizeValue([row.cumplimientoAns, row.estado, row.puntualidad].join(" "));
+      if (text.includes("NO CUMPLE") || text.includes("TARDE") || text.includes("RETRAS") || text.includes("FUERA")) return true;
+      return !isOnTime(row);
+    }
+
     function monthKey(date) {
       if (!date) return "Sin fecha";
-
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-
-      return `${year}-${month}`;
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     }
 
     function formatDate(date, fallback = "") {
       if (!date) return fallback || "-";
+      return date.toLocaleDateString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit" });
+    }
 
-      return date.toLocaleDateString("es-CO", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit"
+    function countBy(rows, getter) {
+      const counts = {};
+      rows.forEach(row => {
+        const key = String(getter(row) || "Sin dato").trim() || "Sin dato";
+        counts[key] = (counts[key] || 0) + 1;
       });
+      return counts;
+    }
+
+    function sortedEntries(counts, limit = 10) {
+      return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit);
     }
 
     function percentage(value, total) {
@@ -526,301 +826,409 @@
       return Math.round((value / total) * 1000) / 10;
     }
 
-    function average(numbers) {
-      const valid = numbers.filter(number => typeof number === "number" && !isNaN(number));
+    function average(values) {
+      const valid = values.filter(value => typeof value === "number" && !Number.isNaN(value));
       if (!valid.length) return 0;
-
-      return Math.round((valid.reduce((sum, number) => sum + number, 0) / valid.length) * 10) / 10;
+      return Math.round((valid.reduce((sum, value) => sum + value, 0) / valid.length) * 10) / 10;
     }
 
-    function buildDashboard() {
-      const totalCases = normalizedRows.length;
-      const totalCumple = normalizedRows.filter(isCumple).length;
-      const cumplimientoGlobal = percentage(totalCumple, totalCases);
-
-      const responseDays = normalizedRows
-        .map(row => businessDaysBetween(row.fechaRecepcion, row.fechaRespuesta))
-        .filter(value => value !== null);
-
-      const planDays = normalizedRows
-        .map(row => businessDaysBetween(row.fechaRecepcion, row.fechaPlan))
-        .filter(value => value !== null);
-
-      const avgResponseDays = average(responseDays);
-      const avgPlanDays = average(planDays);
-      const openCases = normalizedRows.filter(isOpen).length;
-
-      document.getElementById("kpiCumplimiento").textContent = `${cumplimientoGlobal}%`;
-      document.getElementById("kpiTiempoRespuesta").textContent = `${avgResponseDays} días`;
-      document.getElementById("kpiAbiertas").textContent = openCases;
-
-      renderLineChart();
-      renderBarChart();
-      renderDetailTable();
-      renderANSStats("respuestaStats", 1, responseDays, "Respuesta");
-      renderANSStats("planStats", 3, planDays, "Plan de Acción");
-      renderAreasList();
+    function destroyChart(id) {
+      if (charts[id]) {
+        charts[id].destroy();
+        delete charts[id];
+      }
     }
 
-    function renderLineChart() {
-      const grouped = {};
+    const centerTextPlugin = {
+      id: "centerTextPlugin",
+      afterDraw(chart) {
+        const text = chart.options.plugins.centerText?.text;
+        if (!text) return;
 
-      normalizedRows.forEach(row => {
-        const key = monthKey(row.fechaRecepcion);
+        const { ctx, chartArea } = chart;
+        ctx.save();
+        ctx.font = "900 34px Poppins, sans-serif";
+        ctx.fillStyle = COLORS.blue;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, (chartArea.left + chartArea.right) / 2, (chartArea.top + chartArea.bottom) / 2);
+        ctx.restore();
+      }
+    };
 
-        if (!grouped[key]) {
-          grouped[key] = { total: 0, cumple: 0 };
+    Chart.register(centerTextPlugin);
+
+    function renderHome(ncRows) {
+      const total = normalizedRows.length;
+      const cumple = ncRows.filter(isCumple).length;
+      const cumplimiento = percentage(cumple, ncRows.length);
+      const responseDays = ncRows.map(row => businessDaysBetween(row.fechaRecepcion, row.fechaRespuesta)).filter(v => v !== null);
+      const avgResponse = average(responseDays);
+      const openCases = ncRows.filter(isOpen).length;
+
+      document.getElementById("kpiTotal").textContent = total.toLocaleString("es-CO");
+      document.getElementById("kpiCumplimiento").textContent = `${cumplimiento}%`;
+      document.getElementById("kpiPromRespuesta").textContent = `${avgResponse} días`;
+      document.getElementById("kpiAbiertas").textContent = openCases.toLocaleString("es-CO");
+
+      destroyChart("homeDonutChart");
+      charts.homeDonutChart = new Chart(document.getElementById("homeDonutChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Cumple", "No cumple / sin dato"],
+          datasets: [{
+            data: [cumple, Math.max(ncRows.length - cumple, 0)],
+            backgroundColor: [COLORS.blue, COLORS.orange],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "72%",
+          plugins: {
+            legend: { position: "bottom" },
+            centerText: { text: `${cumplimiento}%` }
+          }
         }
+      });
+    }
 
-        grouped[key].total++;
+    function renderRadicaciones(rows) {
+      const dependenciaCounts = sortedEntries(countBy(rows, row => row.dependencia), 10);
+      const usuarioCounts = sortedEntries(countBy(rows, row => row.usuario), 6);
 
-        if (isCumple(row)) {
-          grouped[key].cumple++;
+      destroyChart("radicacionesChart");
+      charts.radicacionesChart = new Chart(document.getElementById("radicacionesChart"), {
+        type: "bar",
+        data: {
+          labels: dependenciaCounts.map(item => item[0]),
+          datasets: [{
+            label: "Trámites",
+            data: dependenciaCounts.map(item => item[1]),
+            backgroundColor: COLORS.blue,
+            borderRadius: 10
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 } }
+          }
         }
       });
 
+      renderList("radicacionesUsuarios", usuarioCounts, "fa-user", rows.length);
+    }
+
+    function renderInmediatos(rows) {
+      const onTime = rows.filter(isOnTime).length;
+      const pct = percentage(onTime, rows.length);
+      const late = Math.max(rows.length - onTime, 0);
+
+      destroyChart("inmediatosGaugeChart");
+      charts.inmediatosGaugeChart = new Chart(document.getElementById("inmediatosGaugeChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["A tiempo", "Fuera de tiempo"],
+          datasets: [{
+            data: [pct, Math.max(100 - pct, 0)],
+            backgroundColor: [COLORS.blue, COLORS.lightOrange],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          circumference: 180,
+          rotation: 270,
+          cutout: "74%",
+          plugins: {
+            legend: { position: "bottom" },
+            centerText: { text: `${pct}%` }
+          }
+        }
+      });
+
+      document.getElementById("inmediatosStats").innerHTML = `
+        ${statItem("Total registros", rows.length, "fa-database", "blue")}
+        ${statItem("Entregas a tiempo", onTime, "fa-circle-check", "orange")}
+        ${statItem("Fuera de tiempo / sin dato", late, "fa-clock", "blue")}
+      `;
+    }
+
+    function renderLlegada(rows) {
+      const punctual = rows.filter(isOnTime).length;
+      const late = Math.max(rows.length - punctual, 0);
+      const punctualPct = percentage(punctual, rows.length);
+
+      destroyChart("llegadaDonutChart");
+      charts.llegadaDonutChart = new Chart(document.getElementById("llegadaDonutChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Puntual", "Retraso / sin dato"],
+          datasets: [{
+            data: [punctual, late],
+            backgroundColor: [COLORS.blue, COLORS.orange],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "68%",
+          plugins: {
+            legend: { position: "bottom" },
+            centerText: { text: `${punctualPct}%` }
+          }
+        }
+      });
+
+      document.getElementById("llegadaStats").innerHTML = `
+        ${statItem("Total registros", rows.length, "fa-people-group", "blue")}
+        ${statItem("Puntuales", punctual, "fa-user-check", "orange")}
+        ${statItem("Retrasos / sin dato", late, "fa-user-clock", "blue")}
+      `;
+    }
+
+    function renderNoConformidades(rows) {
+      const total = rows.length;
+      const cumple = rows.filter(isCumple).length;
+      const cumplimiento = percentage(cumple, total);
+
+      const responseDays = rows.map(row => businessDaysBetween(row.fechaRecepcion, row.fechaRespuesta)).filter(v => v !== null);
+      const planDays = rows.map(row => businessDaysBetween(row.fechaRecepcion, row.fechaPlan)).filter(v => v !== null);
+
+      document.getElementById("ncCumplimiento").textContent = `${cumplimiento}%`;
+      document.getElementById("ansRespuestaProm").textContent = `Promedio: ${average(responseDays)} días hábiles.`;
+      document.getElementById("ansPlanProm").textContent = `Promedio: ${average(planDays)} días hábiles.`;
+
+      const grouped = {};
+      rows.forEach(row => {
+        const key = monthKey(row.fechaRecepcion || row.baseDate);
+        if (!grouped[key]) grouped[key] = { total: 0, cumple: 0 };
+        grouped[key].total++;
+        if (isCumple(row)) grouped[key].cumple++;
+      });
+
       const labels = Object.keys(grouped).sort();
-      const values = labels.map(label => percentage(grouped[label].cumple, grouped[label].total));
+      const pctValues = labels.map(label => percentage(grouped[label].cumple, grouped[label].total));
+      const volumeValues = labels.map(label => grouped[label].total);
 
-      const ctx = document.getElementById("lineChart");
-
-      if (lineChartInstance) lineChartInstance.destroy();
-
-      lineChartInstance = new Chart(ctx, {
+      destroyChart("ncLineChart");
+      charts.ncLineChart = new Chart(document.getElementById("ncLineChart"), {
         type: "line",
         data: {
           labels,
           datasets: [{
             label: "% Cumplimiento ANS",
-            data: values,
-            borderColor: "#004AAD",
-            backgroundColor: "rgba(0, 74, 173, 0.12)",
-            pointBackgroundColor: "#F37021",
-            pointBorderColor: "#F37021",
+            data: pctValues,
+            borderColor: COLORS.blue,
+            backgroundColor: COLORS.lightBlue,
+            pointBackgroundColor: COLORS.orange,
+            pointBorderColor: COLORS.orange,
             pointRadius: 5,
-            tension: 0.35,
-            fill: true
+            fill: true,
+            tension: 0.35
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              labels: {
-                color: "#334155",
-                font: { weight: "bold" }
-              }
-            },
             tooltip: {
-              callbacks: {
-                label: context => `${context.raw}%`
-              }
+              callbacks: { label: context => `${context.raw}%` }
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               max: 100,
-              ticks: {
-                callback: value => `${value}%`
-              }
+              ticks: { callback: value => `${value}%` }
             }
           }
         }
       });
-    }
 
-    function renderBarChart() {
-      const counts = {};
-
-      normalizedRows.forEach(row => {
-        const area = String(row.areaRaw || "Sin área / servicio").trim() || "Sin área / servicio";
-        counts[area] = (counts[area] || 0) + 1;
-      });
-
-      const sorted = Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-      const labels = sorted.map(item => item[0]);
-      const values = sorted.map(item => item[1]);
-
-      const ctx = document.getElementById("barChart");
-
-      if (barChartInstance) barChartInstance.destroy();
-
-      barChartInstance = new Chart(ctx, {
+      destroyChart("ncVolumeChart");
+      charts.ncVolumeChart = new Chart(document.getElementById("ncVolumeChart"), {
         type: "bar",
         data: {
           labels,
           datasets: [{
-            label: "Volumen de casos",
-            data: values,
-            backgroundColor: "#F37021",
-            borderColor: "#F37021",
-            borderWidth: 1,
+            label: "Casos",
+            data: volumeValues,
+            backgroundColor: COLORS.orange,
             borderRadius: 10
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: {
-                color: "#334155",
-                font: { weight: "bold" }
-              }
-            }
-          },
           scales: {
-            x: {
-              ticks: {
-                color: "#334155",
-                maxRotation: 35,
-                minRotation: 0
-              }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0
-              }
-            }
+            y: { beginAtZero: true, ticks: { precision: 0 } }
           }
         }
       });
+
+      renderNoConformidadesTable(rows, "");
     }
 
-    function renderDetailTable(search = "") {
-      const tbody = document.getElementById("detailTableBody");
-      tbody.innerHTML = "";
+    function renderNoConformidadesTable(rows, searchTerm = "") {
+      const search = normalizeValue(searchTerm);
+      const tbody = document.getElementById("ncTableBody");
 
-      const filteredRows = normalizedRows.filter(row => {
-        if (!search) return true;
+      const filtered = rows
+        .filter(row => {
+          if (!search) return true;
+          const text = normalizeValue([
+            row.id,
+            row.fechaRecepcionRaw,
+            row.fechaRespuestaRaw,
+            row.fechaPlanRaw,
+            row.cumplimientoAns,
+            row.dependencia,
+            row.estado
+          ].join(" "));
+          return text.includes(search);
+        })
+        .sort((a, b) => {
+          const dateA = a.fechaRecepcion || a.baseDate || new Date(0);
+          const dateB = b.fechaRecepcion || b.baseDate || new Date(0);
+          return dateB - dateA;
+        })
+        .slice(0, 10);
 
-        const haystack = [
-          row.caso,
-          row.fechaRecepcionRaw,
-          row.fechaRespuestaRaw,
-          row.fechaPlanRaw,
-          row.cumplimientoRaw,
-          row.areaRaw,
-          row.estadoRaw
-        ].join(" ").toLowerCase();
-
-        return haystack.includes(search);
-      });
-
-      filteredRows.forEach((row, index) => {
-        const tr = document.createElement("tr");
-
-        if (isCumple(row)) {
-          tr.className = "bg-green-50 hover:bg-green-100";
-        } else if (isNoCumple(row)) {
-          tr.className = "bg-red-50 hover:bg-red-100";
-        } else {
-          tr.className = "hover:bg-slate-50";
-        }
-
-        tr.innerHTML = `
-          <td class="table-td font-semibold">${escapeHTML(row.caso || index + 1)}</td>
-          <td class="table-td">${formatDate(row.fechaRecepcion, row.fechaRecepcionRaw)}</td>
-          <td class="table-td">${formatDate(row.fechaRespuesta, row.fechaRespuestaRaw)}</td>
-          <td class="table-td">${formatDate(row.fechaPlan, row.fechaPlanRaw)}</td>
-          <td class="table-td">
-            <span class="${isCumple(row) ? "bg-green-100 text-green-800" : isNoCumple(row) ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-700"} rounded-full px-3 py-1 text-xs font-bold">
-              ${escapeHTML(row.cumplimientoRaw || "Sin dato")}
-            </span>
-          </td>
-          <td class="table-td">${escapeHTML(row.areaRaw || "Sin dato")}</td>
-          <td class="table-td">${escapeHTML(row.estadoRaw || "-")}</td>
-        `;
-
-        tbody.appendChild(tr);
-      });
-
-      if (!filteredRows.length) {
+      if (!filtered.length) {
         tbody.innerHTML = `
           <tr>
             <td colspan="7" class="p-6 text-center text-slate-500">
-              No hay registros que coincidan con la búsqueda.
+              No hay casos para mostrar.
             </td>
           </tr>
         `;
+        return;
       }
-    }
 
-    function renderANSStats(containerId, threshold, daysArray, label) {
-      const container = document.getElementById(containerId);
+      tbody.innerHTML = filtered.map((row, index) => {
+        const rowClass = isCumple(row)
+          ? "bg-green-50 hover:bg-green-100"
+          : isNoCumple(row)
+            ? "bg-red-50 hover:bg-red-100"
+            : "hover:bg-slate-50";
 
-      const validCount = daysArray.length;
-      const averageDays = average(daysArray);
-      const calculatedComplies = daysArray.filter(days => days <= threshold).length;
-      const calculatedCompliance = percentage(calculatedComplies, validCount);
-
-      container.innerHTML = `
-        <article class="rounded-2xl border border-slate-200 p-5">
-          <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">ANS ${label}</p>
-          <h4 class="text-3xl font-black text-compensarBlue mt-2">${threshold} día${threshold > 1 ? "s" : ""} hábil${threshold > 1 ? "es" : ""}</h4>
-          <p class="text-sm text-slate-500 mt-2">Umbral de referencia operativo.</p>
-        </article>
-
-        <article class="rounded-2xl border border-slate-200 p-5">
-          <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">Promedio calculado</p>
-          <h4 class="text-3xl font-black text-compensarOrange mt-2">${averageDays} días</h4>
-          <p class="text-sm text-slate-500 mt-2">Cálculo dinámico en días hábiles.</p>
-        </article>
-
-        <article class="rounded-2xl border border-slate-200 p-5">
-          <p class="text-xs uppercase tracking-wide text-slate-500 font-bold">Cumplimiento calculado por fecha</p>
-          <h4 class="text-3xl font-black text-compensarBlue mt-2">${calculatedCompliance}%</h4>
-          <p class="text-sm text-slate-500 mt-2">Referencia técnica; el KPI oficial usa CUMPLIMIENTO ANS.</p>
-        </article>
-      `;
-    }
-
-    function renderAreasList() {
-      const counts = {};
-
-      normalizedRows.forEach(row => {
-        const area = String(row.areaRaw || "Sin área / servicio").trim() || "Sin área / servicio";
-        counts[area] = (counts[area] || 0) + 1;
-      });
-
-      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-      const total = normalizedRows.length;
-
-      document.getElementById("areasList").innerHTML = sorted.map(([area, count]) => {
-        const pct = percentage(count, total);
+        const badgeClass = isCumple(row)
+          ? "bg-green-100 text-green-800"
+          : isNoCumple(row)
+            ? "bg-red-100 text-red-800"
+            : "bg-slate-100 text-slate-700";
 
         return `
-          <article class="rounded-2xl border border-slate-200 p-5">
-            <p class="font-black text-compensarBlue">${escapeHTML(area)}</p>
-            <p class="text-3xl font-black text-compensarOrange mt-2">${count}</p>
-            <p class="text-sm text-slate-500 mt-1">${pct}% del total de casos</p>
-          </article>
+          <tr class="${rowClass}">
+            <td class="table-td font-black">${escapeHTML(row.id || index + 1)}</td>
+            <td class="table-td">${formatDate(row.fechaRecepcion, row.fechaRecepcionRaw)}</td>
+            <td class="table-td">${formatDate(row.fechaRespuesta, row.fechaRespuestaRaw)}</td>
+            <td class="table-td">${formatDate(row.fechaPlan, row.fechaPlanRaw)}</td>
+            <td class="table-td">
+              <span class="rounded-full px-3 py-1 text-xs font-black ${badgeClass}">
+                ${escapeHTML(row.cumplimientoAns || "Sin dato")}
+              </span>
+            </td>
+            <td class="table-td">${escapeHTML(row.dependencia || "Sin dato")}</td>
+            <td class="table-td">${escapeHTML(row.estado || "-")}</td>
+          </tr>
         `;
       }).join("");
     }
 
-    function showAlert(message) {
-      const alertBox = document.getElementById("alertBox");
+    function renderMensajeria(rows) {
+      const destinoCounts = sortedEntries(countBy(rows, row => row.destino), 10);
 
-      if (!message) {
-        alertBox.classList.add("hidden");
-        alertBox.textContent = "";
+      destroyChart("mensajeriaDestinosChart");
+      charts.mensajeriaDestinosChart = new Chart(document.getElementById("mensajeriaDestinosChart"), {
+        type: "bar",
+        data: {
+          labels: destinoCounts.map(item => item[0]),
+          datasets: [{
+            label: "Frecuencia",
+            data: destinoCounts.map(item => item[1]),
+            backgroundColor: COLORS.orange,
+            borderRadius: 10
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true, ticks: { precision: 0 } }
+          }
+        }
+      });
+
+      renderList("mensajeriaList", destinoCounts.slice(0, 6), "fa-location-dot", rows.length);
+    }
+
+    function renderList(containerId, entries, icon, total) {
+      const container = document.getElementById(containerId);
+
+      if (!entries.length) {
+        container.innerHTML = `<p class="text-sm text-slate-500">No hay datos disponibles.</p>`;
         return;
       }
 
-      alertBox.textContent = message;
-      alertBox.classList.remove("hidden");
+      container.innerHTML = entries.map(([label, count]) => `
+        <div class="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-black text-compensarBlue">${escapeHTML(label)}</p>
+              <p class="text-sm text-slate-500 mt-1">${percentage(count, total)}% del total</p>
+            </div>
+            <div class="h-10 w-10 rounded-xl bg-white text-compensarOrange flex items-center justify-center shadow-sm">
+              <i class="fa-solid ${icon}"></i>
+            </div>
+          </div>
+          <p class="title-font text-2xl font-black text-compensarOrange mt-3">${count}</p>
+        </div>
+      `).join("");
+    }
+
+    function statItem(label, value, icon, tone) {
+      const colorClass = tone === "orange" ? "text-compensarOrange" : "text-compensarBlue";
+      return `
+        <div class="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-black text-slate-600">${label}</p>
+            <i class="fa-solid ${icon} ${colorClass}"></i>
+          </div>
+          <p class="title-font text-3xl font-black ${colorClass} mt-2">${Number(value).toLocaleString("es-CO")}</p>
+        </div>
+      `;
     }
 
     function showLoading(isLoading) {
-      const loadingBox = document.getElementById("loadingBox");
-      loadingBox.classList.toggle("hidden", !isLoading);
+      document.getElementById("loadingBox").classList.toggle("hidden", !isLoading);
+    }
+
+    function showAlert(message) {
+      const alert = document.getElementById("alertBox");
+
+      if (!message) {
+        alert.classList.add("hidden");
+        alert.textContent = "";
+        return;
+      }
+
+      alert.textContent = message;
+      alert.classList.remove("hidden");
     }
 
     function escapeHTML(value) {
