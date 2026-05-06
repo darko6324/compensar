@@ -457,8 +457,8 @@ tbody td{padding:9px 13px;color:var(--text)}
           <div class="cw t"><canvas id="ch-rad-tipos"></canvas></div>
         </div>
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-calendar-days"></i> Evolución Mensual</div>
-          <div class="cw"><canvas id="ch-rad-mes"></canvas></div>
+          <div class="ct"><i class="fa-solid fa-calendar-days"></i> Radicaciones &amp; Usuarios Únicos por Mes</div>
+          <div class="cw" style="height:280px"><canvas id="ch-rad-mes"></canvas></div>
         </div>
       </div>
 
@@ -1009,11 +1009,96 @@ function renderRad(){
   mkCh('ch-rad-tipos',{type:'bar',data:{labels:tipos.map(t=>t[0]),datasets:[{data:tipos.map(t=>t[1]),backgroundColor:COR+'cc',borderRadius:4,borderSkipped:false}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{grid:{color:'#f1f5f9'}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 
-  // Mensual
-  const mMes=groupBy(rows,r=>mesKeyDate(r[c.fecha]||''));
-  const ml=sortedMeses(mMes).slice(-12);
-  mkCh('ch-rad-mes',{type:'line',data:{labels:ml,datasets:[{data:ml.map(k=>mMes[k]),borderColor:COR,backgroundColor:COR+'22',fill:true,tension:.4,pointBackgroundColor:COR,pointRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#f1f5f9'}}}}});
+  // Mensual — radicaciones totales + usuarios únicos por mes (col Usuario)
+  const mMes={};
+  rows.forEach(r=>{
+    const mes=mesKeyDate(r[c.fecha]||'');
+    if(!mMes[mes])mMes[mes]={total:0,users:new Set()};
+    mMes[mes].total++;
+    const usr=(r[c.user]||'').trim();
+    if(usr)mMes[mes].users.add(usr.toLowerCase());
+  });
+  const ml=sortedMeses(mMes).filter(k=>k!=='Sin fecha').slice(-12);
+  const radData=ml.map(k=>mMes[k].total);
+  const usrData=ml.map(k=>mMes[k].users.size);
+
+  mkCh('ch-rad-mes',{
+    type:'bar',
+    data:{
+      labels:ml,
+      datasets:[
+        {
+          type:'bar',
+          label:'Radicaciones',
+          data:radData,
+          backgroundColor:COR+'bb',
+          borderRadius:5,
+          borderSkipped:false,
+          yAxisID:'y',
+          order:2
+        },
+        {
+          type:'line',
+          label:'Usuarios Únicos',
+          data:usrData,
+          borderColor:CBL,
+          backgroundColor:CBL+'22',
+          fill:false,
+          tension:.4,
+          pointBackgroundColor:CBL,
+          pointRadius:5,
+          pointHoverRadius:7,
+          borderWidth:2.5,
+          yAxisID:'y2',
+          order:1
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          display:true,
+          position:'top',
+          labels:{font:{size:11},boxWidth:12,padding:16,
+            generateLabels:chart=>chart.data.datasets.map((ds,i)=>({
+              text:ds.label,
+              fillStyle:i===0?COR:CBL,
+              strokeStyle:i===0?COR:CBL,
+              lineWidth:i===0?0:2.5,
+              hidden:false,
+              datasetIndex:i
+            }))
+          }
+        },
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+              const val=ctx.parsed.y;
+              return ctx.dataset.label+': '+(val||0).toLocaleString('es-CO');
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{
+          position:'left',
+          grid:{color:'#f1f5f9'},
+          title:{display:true,text:'Radicaciones',font:{size:10},color:COR},
+          ticks:{color:COR}
+        },
+        y2:{
+          position:'right',
+          grid:{display:false},
+          title:{display:true,text:'Usuarios Únicos',font:{size:10},color:CBL},
+          ticks:{color:CBL}
+        }
+      }
+    }
+  });
 
   // Sede
   const mSede=topN(groupBy(rows,r=>(r[c.sede]||'Sin dato').trim()),8);
