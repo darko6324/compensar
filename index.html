@@ -446,6 +446,9 @@ tbody td{padding:9px 13px;color:var(--text)}
         <label>Canal de Entrada
           <select id="rad-canal" onchange="applyRadFilters()"><option value="">Todos</option></select>
         </label>
+        <label>Tipo Correspondencia
+          <select id="rad-tipo" onchange="applyRadFilters()"><option value="">Todos</option></select>
+        </label>
         <button class="btn-clear" onclick="clearRadFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
       </div>
 
@@ -543,6 +546,9 @@ tbody td{padding:9px 13px;color:var(--text)}
       <div class="filters">
         <label>Nombre del Empleado
           <select id="ll-nombre" onchange="applyLlFilters()"><option value="">Todos</option></select>
+        </label>
+        <label>Ventanilla
+          <select id="ll-ventanilla" onchange="applyLlFilters()"><option value="">Todas</option></select>
         </label>
         <label>Mes
           <select id="ll-mes" onchange="applyLlFilters()"><option value="">Todos</option></select>
@@ -962,27 +968,31 @@ function buildRadFilters(){
   const meses=[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort);
   const sedes=[...new Set(rows.map(r=>(r[c.sede]||'').trim()).filter(Boolean))].sort();
   const canales=[...new Set(rows.map(r=>(r[c.canal]||'').trim()).filter(Boolean))].sort();
+  const tipos=[...new Set(rows.map(r=>(r[c.tipo]||'').trim()).filter(Boolean))].sort();
   populateSelect('rad-mes',meses,false);
   populateSelect('rad-sede',sedes,false);
   populateSelect('rad-canal',canales,false);
+  populateSelect('rad-tipo',tipos,false);
 }
 
 function applyRadFilters(){
   const mes=document.getElementById('rad-mes').value;
   const sede=document.getElementById('rad-sede').value;
   const canal=document.getElementById('rad-canal').value;
+  const tipo=document.getElementById('rad-tipo').value;
   const c=radCols(RAW.rad);
   FILT.rad=RAW.rad.filter(r=>{
     if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
     if(sede&&(r[c.sede]||'').trim()!==sede)return false;
     if(canal&&(r[c.canal]||'').trim()!==canal)return false;
+    if(tipo&&(r[c.tipo]||'').trim()!==tipo)return false;
     return true;
   });
   renderRad();
 }
 
 function clearRadFilters(){
-  ['rad-mes','rad-sede','rad-canal'].forEach(id=>document.getElementById(id).value='');
+  ['rad-mes','rad-sede','rad-canal','rad-tipo'].forEach(id=>document.getElementById(id).value='');
   FILT.rad=[...RAW.rad];
   renderRad();
 }
@@ -1000,7 +1010,7 @@ function renderRad(){
   renderKPIs('kpi-rad',[
     {c:'or',i:'fa-solid fa-file-lines',v:fmt(rows.length),l:'Total Radicaciones'},
     {c:'bl',i:'fa-solid fa-layer-group',v:fmt(Object.keys(groupBy(rows,r=>(r[c.tipo]||''))).length),l:'Tipos Correspondencia'},
-    {c:'gr',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.sede]||''))).length),l:'Sedes Activas'},
+    {c:'gr',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.sede]||'').trim())).filter(k=>k).length),l:'Sedes Activas'},
     {c:'am',i:'fa-solid fa-signal',v:fmt(Object.keys(groupBy(rows,r=>(r[c.canal]||''))).length),l:'Canales de Entrada'},
   ]);
 
@@ -1294,16 +1304,20 @@ function buildLlFilters(){
   const c=llCols(rows);
   const nombres=c.nombre?[...new Set(rows.map(r=>(r[c.nombre]||'').trim()).filter(Boolean))].sort():[];
   populateSelect('ll-nombre',nombres,false);
+  const vents=c.sede?[...new Set(rows.map(r=>(r[c.sede]||'').trim()).filter(Boolean))].sort():[];
+  populateSelect('ll-ventanilla',vents,false);
   const meses=c.fecha?[...new Set(rows.map(r=>mesKeyDate(r[c.fecha]||'')).filter(m=>m!=='Sin fecha'))].sort(mesSort):[];
   populateSelect('ll-mes',meses,false);
 }
 
 function applyLlFilters(){
   const nombre=document.getElementById('ll-nombre').value;
+  const vent=document.getElementById('ll-ventanilla').value;
   const mes=document.getElementById('ll-mes').value;
   const c=llCols(RAW.ll);
   FILT.ll=RAW.ll.filter(r=>{
     if(nombre&&(r[c.nombre]||'').trim()!==nombre)return false;
+    if(vent&&(r[c.sede]||'').trim()!==vent)return false;
     if(mes&&mesKeyDate(r[c.fecha]||'')!==mes)return false;
     return true;
   });
@@ -1312,6 +1326,7 @@ function applyLlFilters(){
 
 function clearLlFilters(){
   document.getElementById('ll-nombre').value='';
+  document.getElementById('ll-ventanilla').value='';
   document.getElementById('ll-mes').value='';
   FILT.ll=[...RAW.ll];
   renderLl();
