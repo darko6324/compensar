@@ -422,7 +422,7 @@ tbody td{padding:9px 13px;color:var(--text)}
         <div class="card"><div class="ct"><i class="fa-solid fa-shield-check"></i> Cumplimiento ANS – No Conformidades</div><div class="cw"><canvas id="ch-home-ans"></canvas></div></div>
       </div>
       <div class="g3">
-        <div class="card"><div class="ct"><i class="fa-solid fa-layer-group"></i> Top Tipos Correspondencia</div><div id="home-tipos" class="pl"></div></div>
+        <div class="card"><div class="ct"><i class="fa-solid fa-layer-group"></i> Top Tipos de Documento</div><div id="home-tipos" class="pl"></div></div>
         <div class="card"><div class="ct"><i class="fa-solid fa-user-tag"></i> Top Clientes Mensajería</div><div id="home-dests" class="pl"></div></div>
         <div class="card"><div class="ct"><i class="fa-solid fa-clock"></i> Puntualidad Personal</div><div style="position:relative;height:180px"><canvas id="ch-home-punt"></canvas></div><div id="home-punt-leg" class="dl" style="margin-top:12px"></div></div>
       </div>
@@ -446,7 +446,7 @@ tbody td{padding:9px 13px;color:var(--text)}
         <label>Canal de Entrada
           <select id="rad-canal" onchange="applyRadFilters()"><option value="">Todos</option></select>
         </label>
-        <label>Tipo Correspondencia
+        <label>Tipo de Documento
           <select id="rad-tipo" onchange="applyRadFilters()"><option value="">Todos</option></select>
         </label>
         <button class="btn-clear" onclick="clearRadFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
@@ -456,7 +456,7 @@ tbody td{padding:9px 13px;color:var(--text)}
 
       <div class="g2">
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-layer-group"></i> Trámites por Tipo Correspondencia</div>
+          <div class="ct"><i class="fa-solid fa-layer-group"></i> Trámites por Tipo de Documento</div>
           <div class="cw t"><canvas id="ch-rad-tipos"></canvas></div>
         </div>
         <div class="card">
@@ -923,7 +923,7 @@ function buildHome(){
     options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'},grid:{color:'#f1f5f9'}},x:{grid:{display:false}}}}});
 
   // Top tipos rad
-  const tipos=topN(groupBy(rad,r=>fv(r,['TIPO CORRESPONDENCIA','Tipo Correspondencia','TIPO'])),5);
+  const tipos=topN(groupBy(rad,r=>fv(r,['TIPO DOCUMENTO','Tipo Documento','TIPO_DOCUMENTO','TIPO DOC','TIPO'])),5);
   renderPL('home-tipos',tipos,'or');
 
   // Top clientes mensajería (nombre cliente)
@@ -953,7 +953,7 @@ function radCols(rows){
   };
   return{
     fecha:  find(['FECHA RADICACION','FECHA','fecha','Date','FECHA_RADICACION']),
-    tipo:   find(['TIPO CORRESPONDENCIA','Tipo Correspondencia','TIPO CORR','TIPO']),
+    tipo:   find(['TIPO DOCUMENTO','Tipo Documento','TIPO_DOCUMENTO','TIPODOCUMENTO','TIPO DOC','TIPO']),
     sede:   find(['SEDE RADICACION','SEDE  RADICACION','SEDE','sede','PUNTO']),
     canal:  find(['CANAL DE ENTRADA','CANAL ENTRADA','CANAL','canal']),
     hora:   find(['HORA','hora','HORA RADICACION','HORA_RADICACION','TIME']),
@@ -1009,7 +1009,7 @@ function renderRad(){
 
   renderKPIs('kpi-rad',[
     {c:'or',i:'fa-solid fa-file-lines',v:fmt(rows.length),l:'Total Radicaciones'},
-    {c:'bl',i:'fa-solid fa-layer-group',v:fmt(Object.keys(groupBy(rows,r=>(r[c.tipo]||''))).length),l:'Tipos Correspondencia'},
+    {c:'bl',i:'fa-solid fa-layer-group',v:fmt(Object.keys(groupBy(rows,r=>(r[c.tipo]||''))).length),l:'Tipos de Documento'},
     {c:'gr',i:'fa-solid fa-building',v:fmt(Object.keys(groupBy(rows,r=>(r[c.sede]||'').trim())).filter(k=>k).length),l:'Sedes Activas'},
     {c:'am',i:'fa-solid fa-signal',v:fmt(Object.keys(groupBy(rows,r=>(r[c.canal]||''))).length),l:'Canales de Entrada'},
   ]);
