@@ -326,8 +326,8 @@ tbody td{padding:9px 13px;color:var(--text)}
   <div class="nav" data-page="inmediatos"><i class="fa-solid fa-bolt"></i> Inmediatos</div>
   <div class="nav" data-page="llegada"><i class="fa-solid fa-user-clock"></i> Inf. de Llegada</div>
   <div class="sb-sec">Calidad & Logística</div>
-  <div class="nav" data-page="noconformidades"><i class="fa-solid fa-triangle-exclamation"></i> No Conformidades</div>
   <div class="nav" data-page="mensajeria"><i class="fa-solid fa-truck"></i> Mensajería</div>
+  <div class="nav" data-page="noconformidades"><i class="fa-solid fa-triangle-exclamation"></i> No Conformidades</div>
   <div class="sb-footer"><i class="fa-solid fa-circle" style="color:var(--green);font-size:7px"></i><span id="dsStatus">Datos actualizados</span></div>
 </nav>
 
@@ -404,8 +404,8 @@ tbody td{padding:9px 13px;color:var(--text)}
           <div class="mc" onclick="goTo('radicaciones')"><div class="mi" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-inbox"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Radicaciones</h3><p>Volumen por tipo, sede, canal y hora.</p></div>
           <div class="mc" onclick="goTo('inmediatos')"><div class="mi" style="background:#fef3c7;color:var(--amber)"><i class="fa-solid fa-bolt"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Inmediatos</h3><p>Órdenes por mes, proceso y servicio.</p></div>
           <div class="mc" onclick="goTo('llegada')"><div class="mi" style="background:#dcfce7;color:var(--green)"><i class="fa-solid fa-user-clock"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Inf. de Llegada</h3><p>Puntualidad y cumplimiento por ventanilla.</p></div>
+          <div class="mc" onclick="goTo('mensajeria')"><div class="mi" style="background:#f0fdf4;color:#16a34a"><i class="fa-solid fa-truck"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Mensajería</h3><p>Clientes frecuentes, conductores y análisis de rutas.</p></div>
           <div class="mc" onclick="goTo('noconformidades')"><div class="mi" style="background:#fee2e2;color:var(--red)"><i class="fa-solid fa-triangle-exclamation"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>No Conformidades</h3><p>ANS, tiempos de respuesta y plan de acción.</p></div>
-          <div class="mc" onclick="goTo('mensajeria')"><div class="mi" style="background:#f0fdf4;color:#16a34a"><i class="fa-solid fa-truck"></i></div><i class="fa-solid fa-arrow-right ma"></i><h3>Mensajería</h3><p>Destinos frecuentes y rutas de mayor demanda.</p></div>
         </div>
       </div>
     </div>
@@ -581,50 +581,6 @@ tbody td{padding:9px 13px;color:var(--text)}
       </div>
     </div>
 
-    <!-- ══ NO CONFORMIDADES ══ -->
-    <div class="page" id="page-noconformidades">
-      <div class="sh">
-        <div><h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--red)"></i> No Conformidades</h2><p>Calidad · ANS 1 día respuesta / 3 días plan de acción</p></div>
-        <div class="sbadge" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-shield"></i> Calidad</div>
-      </div>
-
-      <div class="filters">
-        <label>Mes (Fecha Recepción)
-          <select id="nc-mes" onchange="applyNcFilters()"><option value="">Todos</option></select>
-        </label>
-        <button class="btn-clear" onclick="clearNcFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
-      </div>
-
-      <div class="kg" id="kpi-nc"></div>
-
-      <div class="g2" style="margin-bottom:18px">
-        <div class="card">
-          <div class="ct"><i class="fa-solid fa-gauge-high"></i> Indicador de Cumplimiento ANS</div>
-          <div class="ans-b"><div class="ans-h"><span>Cumple ANS</span><span id="nc-cumple-pct">–%</span></div><div class="ans-tr"><div class="ans-f" id="nc-fill-c"><span></span></div></div></div>
-          <div class="ans-b"><div class="ans-h"><span>No Cumple ANS</span><span id="nc-nocumple-pct">–%</span></div><div class="ans-tr" style="background:#dcfce7"><div class="ans-f" style="background:linear-gradient(90deg,var(--red),#b91c1c)" id="nc-fill-nc"><span></span></div></div></div>
-          <div style="margin-top:16px">
-            <div class="ct"><i class="fa-solid fa-stopwatch"></i> Tiempos Promedio</div>
-            <div class="sp"><div class="sp-i" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-reply"></i></div><div><div class="sp-v" id="nc-avg-resp">–</div><div class="sp-l">Días prom. T. Respuesta</div></div></div>
-            <div class="sp"><div class="sp-i" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-file-pen"></i></div><div><div class="sp-v" id="nc-avg-plan">–</div><div class="sp-l">Días prom. T. Plan de Acción</div></div></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="ct"><i class="fa-solid fa-chart-line"></i> Evolución Mensual del Cumplimiento</div>
-          <div class="cw"><canvas id="ch-nc-linea"></canvas></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="ct"><i class="fa-solid fa-list-check"></i> Últimos 10 Casos – Semáforo ANS</div>
-        <div class="tw">
-          <table>
-            <thead><tr><th>#</th><th>Fecha Recepción</th><th>Caso</th><th>Responsable</th><th>T.Respuesta</th><th>T.Plan Acción</th><th>ANS</th></tr></thead>
-            <tbody id="tb-nc"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- ══ MENSAJERÍA ══ -->
     <div class="page" id="page-mensajeria">
       <div class="sh">
@@ -674,6 +630,50 @@ tbody td{padding:9px 13px;color:var(--text)}
           <div class="ct"><i class="fa-solid fa-map-marker-alt"></i> Mapa de Servicios por Ubicación</div>
           <div id="msg-map" style="height:340px;width:100%;border-radius:10px;overflow:hidden;background:#1a1a2e;display:block;"></div>
           <p style="font-size:11px;color:var(--muted);margin-top:8px"><i class="fa-solid fa-circle-info"></i> Mapa de calor por densidad de servicios · Azul = baja concentración · Rojo = alta concentración</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ NO CONFORMIDADES ══ -->
+    <div class="page" id="page-noconformidades">
+      <div class="sh">
+        <div><h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--red)"></i> No Conformidades</h2><p>Calidad · ANS 1 día respuesta / 3 días plan de acción</p></div>
+        <div class="sbadge" style="background:#fee2e2;color:#b91c1c"><i class="fa-solid fa-shield"></i> Calidad</div>
+      </div>
+
+      <div class="filters">
+        <label>Mes (Fecha Recepción)
+          <select id="nc-mes" onchange="applyNcFilters()"><option value="">Todos</option></select>
+        </label>
+        <button class="btn-clear" onclick="clearNcFilters()"><i class="fa-solid fa-xmark"></i> Limpiar</button>
+      </div>
+
+      <div class="kg" id="kpi-nc"></div>
+
+      <div class="g2" style="margin-bottom:18px">
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-gauge-high"></i> Indicador de Cumplimiento ANS</div>
+          <div class="ans-b"><div class="ans-h"><span>Cumple ANS</span><span id="nc-cumple-pct">–%</span></div><div class="ans-tr"><div class="ans-f" id="nc-fill-c"><span></span></div></div></div>
+          <div class="ans-b"><div class="ans-h"><span>No Cumple ANS</span><span id="nc-nocumple-pct">–%</span></div><div class="ans-tr" style="background:#dcfce7"><div class="ans-f" style="background:linear-gradient(90deg,var(--red),#b91c1c)" id="nc-fill-nc"><span></span></div></div></div>
+          <div style="margin-top:16px">
+            <div class="ct"><i class="fa-solid fa-stopwatch"></i> Tiempos Promedio</div>
+            <div class="sp"><div class="sp-i" style="background:var(--orange-light);color:var(--orange)"><i class="fa-solid fa-reply"></i></div><div><div class="sp-v" id="nc-avg-resp">–</div><div class="sp-l">Días prom. T. Respuesta</div></div></div>
+            <div class="sp"><div class="sp-i" style="background:var(--blue-light);color:var(--blue)"><i class="fa-solid fa-file-pen"></i></div><div><div class="sp-v" id="nc-avg-plan">–</div><div class="sp-l">Días prom. T. Plan de Acción</div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ct"><i class="fa-solid fa-chart-line"></i> Evolución Mensual del Cumplimiento</div>
+          <div class="cw"><canvas id="ch-nc-linea"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ct"><i class="fa-solid fa-list-check"></i> Últimos 10 Casos – Semáforo ANS</div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>#</th><th>Fecha Recepción</th><th>Caso</th><th>Responsable</th><th>T.Respuesta</th><th>T.Plan Acción</th><th>ANS</th></tr></thead>
+            <tbody id="tb-nc"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -951,9 +951,11 @@ function radCols(rows){
     for(const c of cands){const f=h.find(k=>k.trim().toLowerCase().includes(c.toLowerCase()));if(f)return f;}
     return null;
   };
+  // Fallback posicional: columna O = índice 14
+  const colByPos=(idx)=>{const k=Object.keys(rows[0]);return k.length>idx?k[idx]:null;};
   return{
     fecha:  find(['FECHA RADICACION','FECHA','fecha','Date','FECHA_RADICACION']),
-    tipo:   find(['TIPO DOCUMENTO','Tipo Documento','TIPO_DOCUMENTO','TIPODOCUMENTO','TIPO DOC','TIPO']),
+    tipo:   find(['TIPO DE DOCUMENTO','Tipo de Documento','TIPO DOCUMENTO','Tipo Documento','TIPO_DOCUMENTO','TIPODOCUMENTO','TIPO DOC','TIPO DE DOC','tipo de documento','tipo documento','TIPO'])||colByPos(14),
     sede:   find(['SEDE RADICACION','SEDE  RADICACION','SEDE','sede','PUNTO']),
     canal:  find(['CANAL DE ENTRADA','CANAL ENTRADA','CANAL','canal']),
     hora:   find(['HORA','hora','HORA RADICACION','HORA_RADICACION','TIME']),
@@ -1006,6 +1008,14 @@ function buildRad(){
 function renderRad(){
   const rows=FILT.rad;
   const c=radCols(rows.length?rows:RAW.rad);
+  // Diagnóstico: ver nombre exacto de columna tipo detectada
+  if(RAW.rad.length&&!window._radDiagDone){
+    window._radDiagDone=true;
+    const allCols=Object.keys(RAW.rad[0]);
+    console.log('[BI Compensar] Columnas Radicaciones:', allCols);
+    console.log('[BI Compensar] Col tipo detectada:', c.tipo, '→ valor ejemplo:', RAW.rad[0][c.tipo]);
+    console.log('[BI Compensar] Columna O (índice 14):', allCols[14], '→ valor:', RAW.rad[0][allCols[14]]);
+  }
 
   renderKPIs('kpi-rad',[
     {c:'or',i:'fa-solid fa-file-lines',v:fmt(rows.length),l:'Total Radicaciones'},
