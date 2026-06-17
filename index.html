@@ -107,6 +107,32 @@ L.heatLayer=function(e,t){return new L.HeatLayer(e,t)};
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow-x:hidden}
+body.auth-pending #sidebar,body.auth-pending #main,body.auth-pending #lo{display:none!important}
+
+/* AUTH */
+#authScreen{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#003280 0%,#004AAD 56%,#F37021 140%)}
+.auth-card{width:min(430px,100%);background:#fff;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.24);padding:30px;border:1px solid rgba(255,255,255,.45)}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.auth-logo{width:44px;height:44px;background:var(--orange);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
+.auth-brand h1{font-size:19px;line-height:1.1;color:var(--text)}
+.auth-brand p{font-size:12px;color:var(--muted);margin-top:4px}
+.auth-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.auth-field label{font-size:12px;font-weight:700;color:var(--muted)}
+.auth-field input{width:100%;border:1px solid var(--border);border-radius:9px;padding:11px 12px;font-size:13px;font-family:'Poppins',sans-serif;color:var(--text);background:#fff}
+.auth-field input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(243,112,33,.15)}
+.auth-actions{display:grid;gap:10px;margin-top:16px}
+.auth-btn{border:0;border-radius:9px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .15s,box-shadow .15s,background .15s}
+.auth-btn:active{transform:translateY(1px)}
+.auth-btn.primary{background:var(--orange);color:#fff;box-shadow:0 8px 18px rgba(243,112,33,.24)}
+.auth-btn.primary:hover{background:var(--orange-dark)}
+.auth-btn.google{background:#fff;color:var(--text);border:1px solid var(--border)}
+.auth-btn.google:hover{box-shadow:0 4px 14px rgba(15,23,42,.08)}
+.auth-error{min-height:18px;margin-top:12px;color:var(--red);font-size:12px;font-weight:600}
+.auth-note{margin-top:16px;color:var(--muted);font-size:11px;line-height:1.5}
+.user-chip{display:none;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:11px;color:var(--muted);max-width:260px}
+.user-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logout-btn{background:#fff;color:var(--red);border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:6px}
+.logout-btn:hover{background:#fff1f2}
 
 /* LOADING */
 #lo{position:fixed;inset:0;background:linear-gradient(135deg,#003280,#004AAD);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .6s}
@@ -299,7 +325,34 @@ tbody td{padding:9px 13px;color:var(--text)}
 }
 </style>
 </head>
-<body>
+<body class="auth-pending">
+
+<!-- AUTH -->
+<section id="authScreen" aria-label="Acceso al dashboard">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-logo">C</div>
+      <div>
+        <h1>Compensar BI</h1>
+        <p>Acceso autorizado al dashboard</p>
+      </div>
+    </div>
+    <div class="auth-field">
+      <label for="authEmail">Correo</label>
+      <input id="authEmail" type="email" autocomplete="email" placeholder="usuario@correo.com">
+    </div>
+    <div class="auth-field">
+      <label for="authPassword">Contrasena</label>
+      <input id="authPassword" type="password" autocomplete="current-password" placeholder="Ingresa tu contrasena">
+    </div>
+    <div class="auth-actions">
+      <button id="emailLoginBtn" class="auth-btn primary" type="button"><i class="fa-solid fa-lock"></i> Entrar</button>
+      <button id="googleLoginBtn" class="auth-btn google" type="button" style="display:none"><i class="fa-brands fa-google"></i> Entrar con Google</button>
+    </div>
+    <p id="authError" class="auth-error"></p>
+    <p class="auth-note">El acceso se valida con Firebase Authentication. Los datos del BI se cargan despues de iniciar sesion.</p>
+  </div>
+</section>
 
 <!-- LOADING -->
 <div id="lo">
@@ -339,8 +392,10 @@ tbody td{padding:9px 13px;color:var(--text)}
       <p id="pSub">Sistema de Business Intelligence Operativo</p>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
+      <div id="userChip" class="user-chip"><i class="fa-solid fa-user-shield"></i><span id="userEmail"></span></div>
       <span id="last-upd">Última carga: –</span>
       <button class="refresh-btn" onclick="loadAll()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+      <button id="logoutBtn" class="logout-btn" type="button"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
     </div>
   </div>
 
@@ -1794,7 +1849,135 @@ function renderMsgMap(rows,c){
 // ═══════════════════════════════════
 // INIT
 // ═══════════════════════════════════
-loadAll();
+window.dashboardLoaded=false;
+window.startDashboard=function(){
+  if(window.dashboardLoaded)return;
+  window.dashboardLoaded=true;
+  loadAll();
+};
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDZvQTjASIt40kNWu2aEgztfYU_CWQiKLQ",
+  authDomain: "compensar-bi.firebaseapp.com",
+  projectId: "compensar-bi",
+  storageBucket: "compensar-bi.firebasestorage.app",
+  messagingSenderId: "846061870482",
+  appId: "1:846061870482:web:68299d262d2327dac3354b",
+  measurementId: "G-NEVPTMXLRE"
+};
+
+// Accesos permitidos:
+// 1) Dominios completos, por ejemplo usuario@compensar.com.
+// 2) Correos puntuales, por ejemplo una cuenta externa autorizada.
+const ALLOWED_DOMAINS = [
+  "compensar.com",
+  "quick.com.co"
+];
+
+const ALLOWED_EMAILS = [
+  // "usuario.especifico@gmail.com"
+];
+
+const app = initializeApp(firebaseConfig);
+try { getAnalytics(app); } catch (error) {}
+
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+const authScreen = document.getElementById("authScreen");
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+const authError = document.getElementById("authError");
+const emailLoginBtn = document.getElementById("emailLoginBtn");
+const googleLoginBtn = document.getElementById("googleLoginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const userChip = document.getElementById("userChip");
+const userEmail = document.getElementById("userEmail");
+
+function setAuthError(message){
+  authError.textContent = message || "";
+}
+
+function isAllowed(user){
+  if(!user || !user.email)return false;
+  const email = user.email.toLowerCase();
+  const domainAllowed = ALLOWED_DOMAINS.some(domain=>email.endsWith("@"+domain.toLowerCase()));
+  const emailAllowed = ALLOWED_EMAILS.map(allowedEmail=>allowedEmail.toLowerCase()).includes(email);
+  return domainAllowed || emailAllowed;
+}
+
+function showLogin(){
+  document.body.classList.add("auth-pending");
+  authScreen.style.display = "flex";
+  if(userChip)userChip.style.display = "none";
+  if(userEmail)userEmail.textContent = "";
+}
+
+function showDashboard(user){
+  document.body.classList.remove("auth-pending");
+  authScreen.style.display = "none";
+  if(userChip)userChip.style.display = "flex";
+  if(userEmail)userEmail.textContent = user.email || "Usuario autenticado";
+  window.startDashboard();
+}
+
+emailLoginBtn.addEventListener("click", async ()=>{
+  setAuthError("");
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+  if(!email || !password){
+    setAuthError("Ingresa correo y contrasena.");
+    return;
+  }
+  try{
+    await signInWithEmailAndPassword(auth,email,password);
+  }catch(error){
+    setAuthError("Usuario o contrasena incorrectos.");
+  }
+});
+
+authPassword.addEventListener("keydown", event=>{
+  if(event.key === "Enter")emailLoginBtn.click();
+});
+
+googleLoginBtn.addEventListener("click", async ()=>{
+  setAuthError("");
+  try{
+    await signInWithPopup(auth,googleProvider);
+  }catch(error){
+    setAuthError("No se pudo iniciar sesion con Google.");
+  }
+});
+
+logoutBtn.addEventListener("click", async ()=>{
+  await signOut(auth);
+});
+
+onAuthStateChanged(auth, async user=>{
+  if(!user){
+    showLogin();
+    return;
+  }
+  if(!isAllowed(user)){
+    await signOut(auth);
+    showLogin();
+    setAuthError("Este correo no tiene acceso autorizado.");
+    return;
+  }
+  showDashboard(user);
+});
 </script>
 </body>
 </html>
